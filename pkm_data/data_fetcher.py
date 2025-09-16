@@ -8,7 +8,7 @@ def guardar_json(datos, nombre_archivo):
         print(f"Datos guardados correctamente en {nombre_archivo}")
     except Exception as e:
         print(f"Error al guardar el archivo: {e}")
-1
+
 def save_moves():
     moves = {}
     for i in range(1, 400):
@@ -78,6 +78,78 @@ def save_pokedex():
 
     guardar_json(pkdex, "./pkm_data/pkdex.json")
 
+def save_evolutions():
+    evolutions = {}
+    # Obtener las evoluciones de los pokémon de la 1ª generación
+    for i in range(1, 152):
+        print(f"Obteniendo datos de la evolución {i}...")
+        res = requests.get(f"https://pokeapi.co/api/v2/pokemon-species/{i}")
+        if res.status_code == 200:
+            result = res.json()
+            chain_url = result["evolution_chain"]["url"]
+            res_chain = requests.get(chain_url)
+            
+            def get_evolution_chain_data(evolution_data):
+                """
+                Procesa los datos de la cadena de evolución de la PokeAPI
+                y devuelve un diccionario donde la clave es el ID del Pokémon que evoluciona
+                y el valor es [id_evolucion, metodo_evolucion, nivel_objeto]
+                """
+                evolution_dict = {}
+                
+                def process_chain(chain, current_id):
+                    for evolution in chain.get('evolves_to', []):
+                        # Obtener el ID del Pokémon evolucionado
+                        species_url = evolution['species']['url']
+                        evolved_id = int(species_url.split('/')[-2])
+                        
+                        # Procesar los detalles de evolución
+                        for detail in evolution['evolution_details']:
+                            trigger_name = detail['trigger']['name']
+                            
+                            # Determinar el tercer valor de la tupla
+                            third_value = None
+                            
+                            if trigger_name == 'level-up':
+                                third_value = detail['min_level'] or 0
+                            elif trigger_name == 'use-item':
+                                third_value = detail['item']['name'] if detail['item'] else 'unknown-item'
+                            elif trigger_name == 'trade':
+                                third_value = 'trade'
+                                if detail['trade_species']:
+                                    third_value = f"trade-with-{detail['trade_species']['name']}"
+                            else:
+                                third_value = trigger_name
+                                if detail['item']:
+                                    third_value = detail['item']['name']
+                            
+                            # Agregar al diccionario
+                            evolution_dict[current_id] = [evolved_id, trigger_name, third_value]
+                        
+                        # Procesar recursivamente las siguientes evoluciones
+                        process_chain(evolution, evolved_id)
+                
+                # Obtener el ID del Pokémon inicial
+                initial_species_url = evolution_data['chain']['species']['url']
+                initial_id = int(initial_species_url.split('/')[-2])
+                
+                # Iniciar el procesamiento
+                process_chain(evolution_data['chain'], initial_id)
+                
+                return evolution_dict
+
+            if res_chain.status_code == 200:
+                chain_data = res_chain.json()
+                evolution_chain = get_evolution_chain_data(chain_data)
+                
+                for pokemon_id, evolution_data in evolution_chain.items():
+                    evolutions[pokemon_id] = evolution_data
+                    
+        else:
+            print("Error:", res.status_code, res.text)
+
+    guardar_json(evolutions, "./pkm_data/evolutions.json")
+
 while True:
     print("Script para obtener datos de la POKE API")
     print("Qué datos quieres guardar?")
@@ -97,5 +169,7 @@ while True:
         save_moves()
     elif option == 2:
         save_pokedex()
+    elif option == 3:
+        save_evolutions()
     elif option == 4:
         exit()
