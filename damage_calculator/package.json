@@ -1,0 +1,7 @@
+{
+  "type": "module",
+  "dependencies": {
+    "@smogon/calc": "^0.10.0",
+    "express": "^5.1.0"
+  }
+}

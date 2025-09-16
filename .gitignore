@@ -1,0 +1,41 @@
+# Dependencias de Node en damage_calculator
+damage_calculator/node_modules/
+damage_calculator/npm-debug.log*
+damage_calculator/yarn-debug.log*
+damage_calculator/yarn-error.log*
+
+# Archivos de lock en damage_calculator
+damage_calculator/package-lock.json
+damage_calculator/yarn.lock
+
+# Carpeta pkm_data dentro de damage_calculator - ignora todos los archivos JSON
+pkm_data/*.json
+
+# Variables de entorno en damage_calculator
+damage_calculator/.env
+damage_calculator/.env.local
+damage_calculator/.env.development.local
+damage_calculator/.env.test.local
+damage_calculator/.env.production.local
+
+# Logs en damage_calculator
+damage_calculator/logs
+damage_calculator/*.log
+
+# Otras exclusiones específicas para damage_calculator
+damage_calculator/coverage/
+damage_calculator/.nyc_output
+damage_calculator/.npm
+damage_calculator/.eslintcache
+damage_calculator/.node_repl_history
+damage_calculator/*.tgz
+damage_calculator/.yarn-integrity
+
+# Archivos del sistema y editores (estos pueden mantenerse globales)
+.DS_Store
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+Thumbs.db
