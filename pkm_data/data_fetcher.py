@@ -11,7 +11,7 @@ def guardar_json(datos, nombre_archivo):
 
 def save_moves():
     moves = {}
-    for i in range(1, 400):
+    for i in range(1, 2):
         print(f"Obteniendo datos del movimiento {i}...")
         res = requests.get(f"https://pokeapi.co/api/v2/move/{i}")
         if res.status_code == 200:

@@ -1,4 +1,5 @@
 import requests
+import time
 
 data = {
     "genReq": 3,
@@ -7,7 +8,13 @@ data = {
     "move": "Flamethrower"
 }
 
+start = time.perf_counter()
 res = requests.post("http://localhost:3000/calc", json=data)
+end = time.perf_counter()
+
+elapsed_seconds = end - start
+print(f"Status: {res.status_code}, tiempo total: {elapsed_seconds:.6f} s")
+
 if res.status_code == 200:
     print(res.json()["damage"])
 else:

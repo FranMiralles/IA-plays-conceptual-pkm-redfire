@@ -2,6 +2,7 @@ TRAINERS = {
     "GYM_PLATEADA": {
         "GEODUDE": {
             "level": 12,
+            "ability": "sturdy",
             "moves": ["tackle"]
         },
         "ONIX": {
