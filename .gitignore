@@ -22,7 +22,7 @@ damage_calculator/.env.production.local
 damage_calculator/logs
 damage_calculator/*.log
 
-# Otras exclusiones específicas para damage_calculator
+# Eexclusiones específicas para damage_calculator
 damage_calculator/coverage/
 damage_calculator/.nyc_output
 damage_calculator/.npm
@@ -31,7 +31,7 @@ damage_calculator/.node_repl_history
 damage_calculator/*.tgz
 damage_calculator/.yarn-integrity
 
-# Archivos del sistema y editores (estos pueden mantenerse globales)
+# Archivos del sistema y editores
 .DS_Store
 .vscode/
 .idea/
@@ -39,3 +39,12 @@ damage_calculator/.yarn-integrity
 *.swo
 *~
 Thumbs.db
+
+# Python cache files
+**/__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Carpeta de Python específica para entornos virtuales
+.python-version
