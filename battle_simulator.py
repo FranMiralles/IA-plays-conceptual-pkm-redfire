@@ -28,6 +28,10 @@ def load_json_in_dataset():
     dataset["pkdex"] = pkdex
     return dataset
 
+def calculate_speed(base: int, level: int):
+    return int((((2 * base) + 31)*level)/100 + 5)
+
+
 
 def deal_damage(attacker:object, defender:object, move:str):
     '''
@@ -103,11 +107,13 @@ def simulate_battle(actions:list, rival_team:object, dataset:object):
     '''
     (activePkmID, attackID) = actions[0]
     print(dataset["pkdex"][str(activePkmID)])
+    dataset["pkdex"][str(activePkmID)]
     print(dataset["moves"][str(attackID)])
+    print(dataset["pkdex"][str(activePkmID)]["speed"])
+    print(calculate_speed(dataset["pkdex"][str(activePkmID)]["speed"], 55))
 
-    pass
 
-damage = deal_damage({"species": "Salamence", "ability": "Intimidate", "item": "Choice Band", "level": 100}, 
+damage = deal_damage({"species": "Salamence", "ability": "Intimidate", "item": "Choice Band", "level": 100, "iv": {"as": 31}}, 
             {"species": "Skarmory", "ability": "Sturdy", "item": "Choice Band", "level": 100},
             "Flamethrower")
 

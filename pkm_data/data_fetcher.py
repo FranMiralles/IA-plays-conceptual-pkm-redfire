@@ -59,16 +59,18 @@ def save_pokedex():
             pkm["types"] = [t["type"]["name"] for t in result["types"]]
             pkm["abilities"] = result["abilities"][0]["ability"]["name"]
             pkm["sprite"] = result["sprites"]["front_default"]
-            pkm["moves"] = []
+            pkm["speed"] = result["stats"][5]["base_stat"]
+            pkm["moves"] = {}
 
             for move in result["moves"]:
                 for detail in move["version_group_details"]:
                     if detail["version_group"]["name"] == "firered-leafgreen" and detail["move_learn_method"]["name"] == "level-up" and get_key_with_value(moves, move["move"]["name"]) is not None:
-                        pkm["moves"].append((
-                            { "id": get_key_with_value(moves, move["move"]["name"]) },
-                            { "level": detail["level_learned_at"] },
-                            { "method": detail["move_learn_method"]["name"] }
-                        ))
+                        pkm["moves"][int(get_key_with_value(moves, move["move"]["name"]))] = {
+                            "level": detail["level_learned_at"],
+                            "method": detail["move_learn_method"]["name"]
+
+                        }
+                        
                         break
             
             pkdex[i] = pkm
