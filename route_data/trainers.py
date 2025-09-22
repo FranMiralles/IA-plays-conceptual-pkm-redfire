@@ -1,51 +1,80 @@
 TRAINERS = {
-    "GYM_PLATEADA": {
-        "GEODUDE": {
+    "GYM_PLATEADA": [
+        {
+            "name": "geodude",
             "level": 12,
-            "ability": "sturdy",
-            "moves": ["tackle"]
+            "ability": "rock-head",
+            "moves": ["tackle"],
+            "speed": 13
         },
-        "ONIX": {
+        {
+            "name": "onix",
             "level": 14,
-            "moves": ["tackle", "rock-tomb"]
+            "ability": "rock-head",
+            "moves": ["tackle", "rock-tomb"],
+            "speed": 28
         }
-    },
-    "GYM_CELESTE": {
-        "STARYU": {
+    ],
+    "GYM_CELESTE": [
+        {
+            "name": "staryu",
             "level": 18,
-            "moves": ["tackle", "water-pulse"]
+            "ability": "natural-cure",
+            "moves": ["tackle", "water-pulse"],
+            "speed": 41
         },
-        "STARMIE": {
+        {
+            "name": "starmie",
             "level": 21,
-            "moves": ["swift", "water-pulse"]
+            "ability": "natural-cure",
+            "moves": ["swift", "water-pulse"],
+            "speed": 59
         }
-    },
-    "GYM_CARMIN": {
-        "VOLTORB": {
+    ],
+    "GYM_CARMIN": [
+        {
+            "name": "voltorb",
             "level": 21,
-            "moves": ["sonic-boom", "quick-attack", "shock-wave"]
+            "ability": "soundproof",
+            "moves": ["sonic-boom", "quick-attack", "shock-wave"],
+            "speed": 53
         },
-        "PIKACHU": {
+        {
+            "name": "pikachu",
             "level": 18,
-            "moves": ["shock-wave", "quick-attack"]
+            "ability": "static",
+            "moves": ["shock-wave", "quick-attack"],
+            "speed": 42
         },
-        "RAICHU": {
+        {
+            "name": "raichu",
             "level": 24,
-            "moves": ["shock-wave", "quick-attack"]
+            "ability": "static",
+            "moves": ["shock-wave", "quick-attack"],
+            "speed": 60
         }
-    },
-    "GYM_AZULONA": {
-        "VICTREEBEL": {
+    ],
+    "GYM_AZULONA": [
+        {
+            "name": "victreebel",
             "level": 29,
-            "moves": ["giga-drain", "acid"]
+            "ability": "chlorophyll",
+            "moves": ["giga-drain", "acid"],
+            "speed": 54
         },
-        "TANGELA": {
+        {
+            "name": "tangela",
             "level": 24,
-            "moves": ["giga-drain", "bind"]
+            "ability": "chlorophyll",
+            "moves": ["giga-drain", "bind"],
+            "speed": 41
         },
-        "VILEPLUME": {
+        {
+            "name": "vileplume",
             "level": 29,
-            "moves": ["giga-drain", "acid"]
+            "ability": "chlorophyll",
+            "moves": ["giga-drain", "acid"],
+            "speed": 42
         }
-    }
+    ]
 }

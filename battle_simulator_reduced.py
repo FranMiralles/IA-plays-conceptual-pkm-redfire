@@ -3,6 +3,9 @@ import statistics
 import json
 from route_data.trainers import TRAINERS
 
+# In this version, in pkm battles the individuals only choose the team used in a gym. Attacks used are selected among the possible ones maximizing damage dealt to the rival's pkm. Also, current pkm cannot switch so the current pkm steals being the current one until the battle finishes or the pkm is dead.
+
+# 
 
 def load_json_in_dataset():
     def cargar_json(nombre_archivo):
@@ -39,12 +42,10 @@ def deal_damage(attacker:object, defender:object, move:str):
         attacker: obj
                     - species: str
                     - ability: str
-                    - item: str
                     - level: int
         defender: obj
                     - species: str
                     - ability: str
-                    - item: str
                     - level: int
         move: str
     '''
@@ -64,29 +65,25 @@ def select_best_attack(attacker:object, target:object):
         attacker: obj
                     - species: str
                     - ability: str
-                    - item: str
                     - level: int
                     - moves: list(str)
         defender: obj
                     - species: str
                     - ability: str
-                    - item: str
                     - level: int
     '''
-    biggestDamage = 0
+    best_move = ("", 0)
     for move in attacker["moves"]:
         lostHP = deal_damage(
             {
                 "species": attacker["species"],
                 "ability": attacker["ability"],
-                "item": attacker["item"],
                 "level": attacker["level"],
             }
         ,target, move=move)
-        print(move, " : ",lostHP)
-        if(lostHP > biggestDamage):
-            biggestDamage = lostHP
-    return biggestDamage
+        if(lostHP > best_move[1]):
+            best_move = (move, lostHP)
+    return best_move
 
 def select_level_cap(rival_team:object):
     '''
@@ -104,12 +101,9 @@ def select_level_cap(rival_team:object):
     return max_level
 
 
-def simulate_battle(actions:list, rival_team:list, dataset:object):
+def simulate_battle(team:list, rival_team:list, dataset:object):
     '''
-    At least actions has length 1, and cannot start with a change (-1, idPkm)
-        actions: list of tuples
-                    - (int idPkm, int idAttack): idPkm performs idAttack to current pkm from rival_team
-                    - (-1, idPkm): active pkm changes to idPkm
+        team: list of int idPkm
         rival_team: list of objects
                     - name: str
                     - level: int
@@ -120,20 +114,47 @@ def simulate_battle(actions:list, rival_team:list, dataset:object):
                     - moves.json to object
                     - pkdex.json to object
     '''
-    (activePkmID, attackID) = actions[0]
+    activePkmID = team[0]
     level_cap = select_level_cap(rival_team)
     # Define activePkm
     activePkm = {
-        "name": dataset["pkdex"][str(activePkmID)]["name"],
-        "ability": dataset["pkdex"][str(activePkmID)]["abilities"],
-        "item": None,
+        "species": dataset["pkdex"][str(activePkmID)]["name"],
         "level": level_cap,
-        "moves": dataset["moves"][attackID]["name"]
+        "ability": dataset["pkdex"][str(activePkmID)]["abilities"],
+        "speed": calculate_speed(dataset["pkdex"][str(activePkmID)]["speed"], level_cap - 13)
     }
     # Define possibles moves for activePkm
     possibles_moves_with_priorities = [(dataset["moves"][moveID]["name"], dataset["moves"][moveID]["priority"]) for moveID in dataset["pkdex"][str(activePkmID)]["moves"] if dataset["pkdex"][str(activePkmID)]["moves"][moveID]['level'] <= level_cap]
     activePkm["moves"] = [move_name for (move_name, _) in possibles_moves_with_priorities]
-    print(activePkm)
+
+    activePkm_rival = {
+        "species": rival_team[0]["name"],
+        "level": rival_team[0]["level"],
+        "ability": rival_team[0]["ability"],
+        "speed": rival_team[0]["speed"],
+        "moves": rival_team[0]["moves"]
+    }
+
+    totalHP_team = len(rival_team)
+    playerHP_team = totalHP_team
+    rivalHP_team = totalHP_team
+
+    turn = 1
+
+    while playerHP_team > 0 and rivalHP_team > 0:
+        # Loop that ends if one of the teams runs out of pkm
+        print("PKM ACTIVO")
+        print(activePkm)
+        print("PKM RIVAL ACTIVO")
+        print(activePkm_rival)
+        # Choose wich move selects each pkm
+        activePkm_attack = select_best_attack(activePkm, activePkm_rival)
+        activePkm_rival_attack = select_best_attack(activePkm_rival, activePkm)
+        print(activePkm_attack)
+        print(activePkm_rival_attack)
+        playerHP_team = 0
+
+        turn += 1
 
     '''
     print(dataset["pkdex"][str(activePkmID)])
@@ -161,4 +182,4 @@ dataset = load_json_in_dataset()
 
 
 print("SIMULATE BATTLE")
-simulate_battle([(1,1)],TRAINERS["GYM_PLATEADA"], dataset=dataset)
+simulate_battle([1, 4],TRAINERS["GYM_PLATEADA"], dataset=dataset)
