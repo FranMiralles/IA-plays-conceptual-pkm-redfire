@@ -2,6 +2,7 @@ import requests
 import statistics
 import json
 from route_data.trainers import TRAINERS
+import time
 
 # In this version, in pkm battles the individuals only choose the team used in a gym. Attacks used are selected among the possible ones maximizing damage dealt to the rival's pkm. Also, current pkm cannot switch so the current pkm steals being the current one until the battle finishes or the pkm is dead.
 
@@ -24,7 +25,7 @@ def load_json_in_dataset():
             return {}
     dataset = {}
     evolutions = cargar_json("./pkm_data/evolutions.json")
-    moves = cargar_json("./pkm_data/moves.json")
+    moves = cargar_json("./pkm_data/moves_priority.json")
     pkdex = cargar_json("./pkm_data/pkdex.json")
     dataset["evolutions"] = evolutions
     dataset["moves"] = moves
@@ -33,8 +34,6 @@ def load_json_in_dataset():
 
 def calculate_speed(base: int, level: int):
     return int((((2 * base) + 31)*level)/100 + 5)
-
-
 
 def deal_damage(attacker:object, defender:object, move:str):
     '''
@@ -57,7 +56,10 @@ def deal_damage(attacker:object, defender:object, move:str):
     }
     res = requests.post("http://localhost:3000/calc", json=data)
     maxHP = res.json()["defender"]["rawStats"]["hp"]
-    lostHP = round(statistics.median(res.json()["damage"]) / maxHP, 3)
+    if(type(res.json()["damage"]) == type(1)):
+        lostHP = round(res.json()["damage"] / maxHP, 2)
+    else:
+        lostHP = round(statistics.median(res.json()["damage"]) / maxHP, 2)
     return lostHP
 
 def select_best_attack(attacker:object, target:object):
@@ -101,7 +103,7 @@ def select_level_cap(rival_team:object):
     return max_level
 
 
-def simulate_battle(team:list, rival_team:list, dataset:object):
+def simulate_battle(team: list, rival_team: list, dataset: object):
     '''
         team: list of int idPkm
         rival_team: list of objects
@@ -114,58 +116,106 @@ def simulate_battle(team:list, rival_team:list, dataset:object):
                     - moves.json to object
                     - pkdex.json to object
     '''
-    activePkmID = team[0]
+    start = time.perf_counter()
     level_cap = select_level_cap(rival_team)
-    # Define activePkm
-    activePkm = {
-        "species": dataset["pkdex"][str(activePkmID)]["name"],
-        "level": level_cap,
-        "ability": dataset["pkdex"][str(activePkmID)]["abilities"],
-        "speed": calculate_speed(dataset["pkdex"][str(activePkmID)]["speed"], level_cap - 13)
-    }
-    # Define possibles moves for activePkm
-    possibles_moves_with_priorities = [(dataset["moves"][moveID]["name"], dataset["moves"][moveID]["priority"]) for moveID in dataset["pkdex"][str(activePkmID)]["moves"] if dataset["pkdex"][str(activePkmID)]["moves"][moveID]['level'] <= level_cap]
-    activePkm["moves"] = [move_name for (move_name, _) in possibles_moves_with_priorities]
 
-    activePkm_rival = {
-        "species": rival_team[0]["name"],
-        "level": rival_team[0]["level"],
-        "ability": rival_team[0]["ability"],
-        "speed": rival_team[0]["speed"],
-        "moves": rival_team[0]["moves"]
-    }
+    totalHP_team = len(team) * 100
+    totalHP_rival_team = len(rival_team) * 100
+    damage_team = 0
+    damage_rival_team = 0
 
-    totalHP_team = len(rival_team)
-    playerHP_team = totalHP_team
-    rivalHP_team = totalHP_team
+    turn = 0
 
-    turn = 1
+    # Tolerancia para comparaciones de punto flotante
+    TOLERANCE = 1e-10
 
-    while playerHP_team > 0 and rivalHP_team > 0:
-        # Loop that ends if one of the teams runs out of pkm
-        print("PKM ACTIVO")
-        print(activePkm)
-        print("PKM RIVAL ACTIVO")
-        print(activePkm_rival)
-        # Choose wich move selects each pkm
-        activePkm_attack = select_best_attack(activePkm, activePkm_rival)
-        activePkm_rival_attack = select_best_attack(activePkm_rival, activePkm)
-        print(activePkm_attack)
-        print(activePkm_rival_attack)
-        playerHP_team = 0
-
+    while damage_team < totalHP_team - TOLERANCE and damage_rival_team < totalHP_rival_team - TOLERANCE:
+        # New turn
         turn += 1
+        print("**********************")
+        print("TURNO", turn)
+        print("**********************")
+        
+        activePkmID = team[damage_team // 100]
+        active_HP = 100 - (damage_team % 100)
+        
+        activePkm = {
+            "species": dataset["pkdex"][str(activePkmID)]["name"],
+            "level": level_cap,
+            "ability": dataset["pkdex"][str(activePkmID)]["abilities"],
+            "speed": calculate_speed(dataset["pkdex"][str(activePkmID)]["speed"], level_cap - 13),
+            "moves": [move_key for move_key, move_value in dataset["pkdex"][str(activePkmID)]["moves"].items() if move_value["level"] <= level_cap]
+        }
+        
+        rival_selected_pos = damage_rival_team // 100
+        active_rival_HP = 100 - (damage_rival_team % 100)
+        
+        print(activePkm["species"], "HP", active_HP)
+        print(rival_team[rival_selected_pos]["species"], "HP", active_rival_HP)
+        
+        # Choose which move selects each pkm
+        activePkm_attack = select_best_attack(activePkm, rival_team[rival_selected_pos])
+        activePkm_rival_attack = select_best_attack(rival_team[rival_selected_pos], activePkm)
 
-    '''
-    print(dataset["pkdex"][str(activePkmID)])
+        player_first = False
+        # Which of the moves performs first
+        if dataset["moves"][activePkm_attack[0]] > dataset["moves"][activePkm_rival_attack[0]]:
+            player_first = True
+        elif dataset["moves"][activePkm_rival_attack[0]] > dataset["moves"][activePkm_attack[0]]:
+            player_first = False
+        else:
+            if activePkm["speed"] > calculate_speed(rival_team[rival_selected_pos]["speed"], rival_team[rival_selected_pos]["level"]):
+                player_first = True
+        
+        player_damage = round(activePkm_attack[1] * 100)
+        rival_damage = round(activePkm_rival_attack[1] * 100)
+
+        # Perform first move and reduce hp
+        if player_first:
+            # Player attacks first
+            print(activePkm["species"], "attacks with", activePkm_attack)
+            if active_rival_HP <= player_damage:
+                damage_rival_team += active_rival_HP
+                active_rival_HP = 0
+            else:
+                print(rival_team[rival_selected_pos]["species"], "attacks with", activePkm_rival_attack)
+                damage_rival_team += player_damage
+                active_rival_HP -= player_damage
+                # Rival attacks back
+                if active_HP <= rival_damage:
+                    damage_team += active_HP
+                    active_HP = 0
+                else:
+                    damage_team += rival_damage
+                    active_HP -= rival_damage
+        else:
+            # Rival attacks first
+            print(rival_team[rival_selected_pos]["species"], "attacks with", activePkm_rival_attack)
+            if active_HP <= rival_damage:
+                damage_team += active_HP
+                active_HP = 0
+            else:
+                print(activePkm["species"], "attacks with", activePkm_attack)
+                damage_team += rival_damage
+                active_HP -= rival_damage
+                # Player attacks back
+                if active_rival_HP <= player_damage:
+                    damage_rival_team += active_rival_HP
+                    active_rival_HP = 0
+                else:
+                    damage_rival_team += player_damage
+                    active_rival_HP -= player_damage
+
+        print(activePkm["species"], "HP", active_HP)
+        print(rival_team[rival_selected_pos]["species"], "HP", active_rival_HP)
+
+    end = time.perf_counter()
+    elapsed_seconds = end - start
+    print(f"Tiempo total: {elapsed_seconds:.6f} s")
     
-    dataset["pkdex"][str(activePkmID)]
-    print(dataset["moves"][str(attackID)])
-    print(dataset["pkdex"][str(activePkmID)]["speed"])
-    print(calculate_speed(dataset["pkdex"][str(activePkmID)]["speed"], 55))
-    print(rival_team)
-    print(select_level_cap(rival_team))
-    '''
+    # CORRECCIÓN: Usar comparación con tolerancia en el return
+    player_wins = (damage_team < totalHP_team - TOLERANCE)
+    return (player_wins, damage_team)
 
 
 damage = deal_damage({"species": "Salamence", "ability": "Intimidate", "item": "Choice Band", "level": 100, "iv": {"as": 31}}, 
@@ -182,4 +232,8 @@ dataset = load_json_in_dataset()
 
 
 print("SIMULATE BATTLE")
-simulate_battle([1, 4],TRAINERS["GYM_PLATEADA"], dataset=dataset)
+(passed, damage_lost) = simulate_battle([1, 105 ,10, 58, 24, 77], TRAINERS["GYM_CARMIN"], dataset=dataset)
+
+print("RESULTADOS")
+print(passed)
+print(damage_lost)

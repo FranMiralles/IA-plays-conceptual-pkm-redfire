@@ -11,7 +11,7 @@ def guardar_json(datos, nombre_archivo):
 
 def save_moves():
     moves = {}
-    for i in range(1, 2):
+    for i in range(1, 400):
         print(f"Obteniendo datos del movimiento {i}...")
         res = requests.get(f"https://pokeapi.co/api/v2/move/{i}")
         if res.status_code == 200:
@@ -21,17 +21,14 @@ def save_moves():
             if(result["damage_class"]["name"] == "physical" or result["damage_class"]["name"] == "special"):
                 for entry in result["flavor_text_entries"]:
                     if entry["version_group"]["name"] == "firered-leafgreen":
-                        move = {}
-                        move["name"] = result["name"]
-                        move["priority"] = result["priority"]
-                        moves[i] = move
+                        moves[result["name"]] = result["priority"]
         elif res.status_code == 404:
             print(f"Fin de búsqueda de movimientos en el número {i}")
             break
         else:
             print("Error:", res.status_code, res.text)
 
-    guardar_json(moves, "./pkm_data/moves.json")
+    guardar_json(moves, "./pkm_data/moves_priority.json")
 
 def save_pokedex():
     try:
@@ -40,12 +37,6 @@ def save_pokedex():
     except Exception as e:
         print(f"Es necesario guardar los movimientos primero: {e}")
         return
-    
-    def get_key_with_value(dict, search_value):
-        for key, value in dict.items():
-            if value["name"] == search_value:
-                return key
-        return None
 
     pkdex = {}
     for i in range(1, 152):
@@ -64,8 +55,8 @@ def save_pokedex():
 
             for move in result["moves"]:
                 for detail in move["version_group_details"]:
-                    if detail["version_group"]["name"] == "firered-leafgreen" and detail["move_learn_method"]["name"] == "level-up" and get_key_with_value(moves, move["move"]["name"]) is not None:
-                        pkm["moves"][int(get_key_with_value(moves, move["move"]["name"]))] = {
+                    if detail["version_group"]["name"] == "firered-leafgreen" and detail["move_learn_method"]["name"] == "level-up" and move["move"]["name"] in moves:
+                        pkm["moves"][move["move"]["name"]] = {
                             "level": detail["level_learned_at"],
                             "method": detail["move_learn_method"]["name"]
 
@@ -155,8 +146,8 @@ def save_evolutions():
 while True:
     print("Script para obtener datos de la POKE API")
     print("Qué datos quieres guardar?")
-    print("1. Movimientos")
-    print("2. Pokédex 1-151 pokémon")
+    print("1. Pokédex 1-151 pokémon")
+    print("2. Movimientos")
     print("3. Evoluciones")
     print("4. Exit")
 
@@ -168,9 +159,9 @@ while True:
     option = int(option)
 
     if option == 1:
-        save_moves()
-    elif option == 2:
         save_pokedex()
+    elif option == 2:
+        save_moves()
     elif option == 3:
         save_evolutions()
     elif option == 4:
