@@ -32,7 +32,7 @@ def save_moves():
 
 def save_pokedex():
     try:
-        with open('./pkm_data/moves.json', 'r', encoding='utf-8') as archivo:
+        with open('./pkm_data/moves_priority.json', 'r', encoding='utf-8') as archivo:
             moves = json.load(archivo)
     except Exception as e:
         print(f"Es necesario guardar los movimientos primero: {e}")
