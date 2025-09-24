@@ -239,6 +239,8 @@ def calculate_fitness(individual:list, dataset):
             - first element: list of int that reference pkmID of catched
     '''
     pkm_catched = individual[0]
+    fitness_value = 0
+
     teams = individual[1]
     simulations = []
     for i in range(0, len(teams)):
@@ -246,6 +248,12 @@ def calculate_fitness(individual:list, dataset):
 
     for simulation in simulations:
         print(simulation)
+        if(not simulation[0]):
+            fitness_value += 10000
+        else:
+            fitness_value += simulation[1]
+
+    print(fitness_value)
 
 
 dataset = load_json_in_dataset()
@@ -256,4 +264,23 @@ dataset = load_json_in_dataset()
 # print(passed)
 # print(damage_lost)
 
-calculate_fitness([[1,2,3,4,5,6,7,8,9],[[1,4,7],[1,4,7],[1,4,7],[1,4,7],[1,4,7],[1,4,7],[1,4,7],[1,4,7]]], dataset=dataset)
+calculate_fitness(
+    individual=[
+        [1,2,3,4,5,6,7,8,9],
+        [
+            [1, 4, 7, 30, 79, 45],
+            [1, 4, 7, 30, 79, 45],
+            [1, 4, 7, 30, 79, 45],
+            [1, 4, 7, 30, 79, 45],
+            [1, 4, 7, 30, 79, 45],
+            [1, 4, 7, 30, 79, 45],
+            [1, 4, 7, 30, 79, 45],
+            [1, 4, 7, 30, 79, 45],
+            [1, 4, 7, 30, 79, 45],
+            [1, 4, 7, 30, 79, 45],
+            [1, 4, 7, 30, 79, 45],
+            [1, 4, 7, 30, 79, 45],
+            [1, 4, 7, 30, 79, 45],
+            [1, 4, 7, 30, 79, 45],
+        ]
+    ], dataset=dataset)

@@ -77,6 +77,59 @@ TRAINERS = {
             "speed": 42
         }
     ],
+    "GIOVANNI_AZULONA": [
+        {
+            "species": "Onix",
+            "level": 25,
+            "ability": "rock-head",
+            "moves": ["bind", "rock-throw", "rage"],
+            "speed": 47
+        },
+        {
+            "species": "Rhyhorn",
+            "level": 24,
+            "ability": "rock-head",
+            "moves": ["giga-drain", "bind"],
+            "speed": 24
+        },
+        {
+            "species": "Kangaskhan",
+            "level": 29,
+            "ability": "early-bird",
+            "moves": ["mega-punch", "fake-out", "bite"],
+            "speed": 66
+        }
+    ],
+    "GIOVANNI_AZAFRAN": [
+        {
+            "species": "Nidorino",
+            "level": 37,
+            "ability": "rock-head",
+            "moves": ["bind", "rock-throw", "rage"],
+            "speed": 64
+        },
+        {
+            "species": "Rhyhorn",
+            "level": 37,
+            "ability": "rock-head",
+            "moves": ["rock-blast", "fury-attack"],
+            "speed": 34
+        },
+        {
+            "species": "Kangaskhan",
+            "level": 35,
+            "ability": "early-bird",
+            "moves": ["mega-punch", "fake-out", "rage"],
+            "speed": 78
+        },
+        {
+            "species": "Nidoqueen",
+            "level": 41,
+            "ability": "poison-point",
+            "moves": ["body-slam", "poison-sting", "double-kick"],
+            "speed": 80
+        },
+    ],
     "GYM_FUCSIA": [
         {
             "species": "Koffing",
@@ -106,7 +159,8 @@ TRAINERS = {
             "moves": ["sludge", "tackle"],
             "speed": 69
         }
-    ],"GYM_AZAFRAN": [
+    ],
+    "GYM_AZAFRAN": [
         {
             "species": "Kadabra",
             "level": 38,
@@ -135,7 +189,8 @@ TRAINERS = {
             "moves": ["psychic"],
             "speed": 121
         }
-    ],"GYM_CANELA": [
+    ],
+    "GYM_CANELA": [
         {
             "species": "Growlithe",
             "level": 42,
@@ -164,7 +219,8 @@ TRAINERS = {
             "moves": ["bite", "take-down", "fire-blast"],
             "speed": 108
         }
-    ],"GYM_VERDE": [
+    ],
+    "GYM_VERDE": [
         {
             "species": "Rhyhorn",
             "level": 45,
@@ -200,6 +256,154 @@ TRAINERS = {
             "moves": ["take-down", "rock-blast", "earthquake"],
             "speed": 45
         }
+    ],
+    "ALTO_MANDO_LORELEI": [
+        {
+            "species": "Dewgong",
+            "level": 52,
+            "ability": "thick-fat",
+            "moves": ["ice-beam", "surf"],
+            "speed": 93
+        },
+        {
+            "species": "Cloyster",
+            "level": 51,
+            "ability": "shell-armor",
+            "moves": ["dive"],
+            "speed": 92
+        },
+        {
+            "species": "Slowbro",
+            "level": 52,
+            "ability": "oblivious",
+            "moves": ["ice-beam", "surf"],
+            "speed": 91
+        },
+        {
+            "species": "Jynx",
+            "level": 54,
+            "ability": "oblivious",
+            "moves": ["double-slap", "ice-punch"],
+            "speed": 124
+        },
+        {
+            "species": "Lapras",
+            "level": 50,
+            "ability": "water-absorb",
+            "moves": ["ice-beam", "surf", "body-slam"],
+            "speed": 80
+        }
+    ],
+    "ALTO_MANDO_BRUNO": [
+        {
+            "species": "Onix",
+            "level": 51,
+            "ability": "rock-head",
+            "moves": ["earthquake", "rock-tomb", "iron-tail"],
+            "speed": 92
+        },
+        {
+            "species": "Hitmonchan",
+            "level": 53,
+            "ability": "keen-eye",
+            "moves": ["sky-uppercut", "mach-punch", "rock-tomb"],
+            "speed": 101
+        },
+        {
+            "species": "Hitmonlee",
+            "level": 53,
+            "ability": "limber",
+            "moves": ["brick-break", "mega-kick"],
+            "speed": 113
+        },
+        {
+            "species": "Onix",
+            "level": 54,
+            "ability": "rock-head",
+            "moves": ["earthquake", "double-edge", "iron-tail", "sand-tomb"],
+            "speed": 97
+        },
+        {
+            "species": "Machamp",
+            "level": 56,
+            "ability": "guts",
+            "moves": ["cross-chop", "rock-tomb"],
+            "speed": 83
+        }
+    ],
+    "ALTO_MANDO_AGATHA": [
+        {
+            "species": "Gengar",
+            "level": 54,
+            "ability": "levitate",
+            "moves": ["shadow-punch"],
+            "speed": 140
+        },
+        {
+            "species": "Golbat",
+            "level": 54,
+            "ability": "inner-focus",
+            "moves": ["poison-fang", "air-cutter", "bite"],
+            "speed": 118
+        },
+        {
+            "species": "Haunter",
+            "level": 53,
+            "ability": "levitate",
+            "moves": ["shadow-punch"],
+            "speed": 122
+        },
+        {
+            "species": "Arbok",
+            "level": 56,
+            "ability": "intimidate",
+            "moves": ["sludge-bomb", "iron-tail", "bite"],
+            "speed": 111
+        },
+        {
+            "species": "Gengar",
+            "level": 58,
+            "ability": "levitate",
+            "moves": ["shadow-ball", "sludge-bomb"],
+            "speed": 150
+        }
+    ],
+    "ALTO_MANDO_LANCE": [
+        {
+            "species": "Gyarados",
+            "level": 54,
+            "ability": "intimidate",
+            "moves": ["hyper-beam", "dragon-rage", "twister", "bite"],
+            "speed": 140
+        },
+        {
+            "species": "Dragonair",
+            "level": 54,
+            "ability": "inner-focus",
+            "moves": ["hyper-beam", "dragon-rage", "outrage"],
+            "speed": 118
+        },
+        {
+            "species": "Dragonair",
+            "level": 53,
+            "ability": "levitate",
+            "moves": ["hyper-beam", "outrage"],
+            "speed": 122
+        },
+        {
+            "species": "Aerodactyl",
+            "level": 56,
+            "ability": "intimidate",
+            "moves": ["hyper-beam", "ancient-power", "wing-attack"],
+            "speed": 111
+        },
+        {
+            "species": "Dragonite",
+            "level": 58,
+            "ability": "levitate",
+            "moves": ["hyper-beam", "outrage", "wing-attack"],
+            "speed": 150
+        }
     ]
 }
 
@@ -208,8 +412,14 @@ TRAINERS_ORDER = [
     "GYM_CELESTE",
     "GYM_CARMIN",
     "GYM_AZULONA",
+    "GIOVANNI_AZULONA",
+    "GIOVANNI_AZAFRAN",
     "GYM_FUCSIA",
     "GYM_AZAFRAN",
     "GYM_CANELA",
-    "GYM_VERDE"
+    "GYM_VERDE",
+    "ALTO_MANDO_LORELEI",
+    "ALTO_MANDO_BRUNO",
+    "ALTO_MANDO_AGATHA",
+    "ALTO_MANDO_LANCE"
 ]
