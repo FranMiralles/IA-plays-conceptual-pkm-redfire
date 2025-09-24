@@ -154,7 +154,7 @@ def simulate_battle(team: list, rival_team: list, dataset: object, debug:bool):
             "level": level_cap,
             "ability": dataset["pkdex"][str(activePkmID)]["abilities"],
             "speed": calculate_speed(dataset["pkdex"][str(activePkmID)]["speed"], level_cap),
-            "moves": [move_key for move_key, move_value in dataset["pkdex"][str(activePkmID)]["moves"].items() if move_value["level"] <= level_cap]
+            "moves": [move_key for move_key, move_value in dataset["pkdex"][str(activePkmID)]["moves"].items() if (move_value["level"] <= level_cap or move_value["method"] == "machine")]
         }
         
         rival_selected_pos = damage_rival_team // 100
@@ -241,6 +241,8 @@ def calculate_fitness(individual:list, dataset):
     pkm_catched = individual[0]
     fitness_value = 0
 
+    start = time.perf_counter()
+
     teams = individual[1]
     simulations = []
     for i in range(0, len(teams)):
@@ -254,6 +256,10 @@ def calculate_fitness(individual:list, dataset):
             fitness_value += simulation[1]
 
     print(fitness_value)
+
+    end = time.perf_counter()
+    elapsed_seconds = end - start
+    print(elapsed_seconds)
 
 
 dataset = load_json_in_dataset()

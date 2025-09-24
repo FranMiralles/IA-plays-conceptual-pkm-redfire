@@ -55,7 +55,7 @@ def save_pokedex():
 
             for move in result["moves"]:
                 for detail in move["version_group_details"]:
-                    if detail["version_group"]["name"] == "firered-leafgreen" and detail["move_learn_method"]["name"] == "level-up" and move["move"]["name"] in moves:
+                    if detail["version_group"]["name"] == "firered-leafgreen" and (detail["move_learn_method"]["name"] == "level-up" or detail["move_learn_method"]["name"] == "machine") and move["move"]["name"] in moves:
                         pkm["moves"][move["move"]["name"]] = {
                             "level": detail["level_learned_at"],
                             "method": detail["move_learn_method"]["name"]
@@ -165,4 +165,5 @@ while True:
     elif option == 3:
         save_evolutions()
     elif option == 4:
+        print("Saliendo del menú")
         exit()
