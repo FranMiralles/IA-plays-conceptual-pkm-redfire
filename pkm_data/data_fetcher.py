@@ -117,7 +117,8 @@ def save_evolutions():
                                     third_value = detail['item']['name']
                             
                             # Agregar al diccionario
-                            evolution_dict[current_id] = [evolved_id, trigger_name, third_value]
+                            if evolved_id <= 151:
+                                evolution_dict[current_id] = [evolved_id, trigger_name, third_value]
                         
                         # Procesar recursivamente las siguientes evoluciones
                         process_chain(evolution, evolved_id)

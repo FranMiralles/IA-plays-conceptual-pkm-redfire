@@ -4,6 +4,7 @@ import json
 from route_data.trainers import TRAINERS, TRAINERS_ORDER, PREVIOUS_ROUTES_TO_TRAINER
 from route_data.routes import ROUTES_ORDER
 from route_data.mt_moves import AVAILABLE_MT_TRAINERS
+from route_data.evolve_obj import AVAILABLE_EVOLVE_OBJ_TRAINERS
 import time
 import math
 
@@ -109,7 +110,7 @@ def select_level_cap(rival_team:object):
     return max_level
 
 
-def simulate_battle(team: list, rival_team: list, available_mt: list,dataset: object, verbose:bool):
+def simulate_battle(team: list, rival_team: list, available_mt: list, available_ev_obj: list,dataset: object, verbose:bool):
     '''
         team: list of int idPkm
         rival_team: list of objects
@@ -130,7 +131,7 @@ def simulate_battle(team: list, rival_team: list, available_mt: list,dataset: ob
     for pkmID in team:
         pkmID = str(pkmID)
         while pkmID in dataset["evolutions"]:
-            if dataset["evolutions"][pkmID][1] == 'level-up' and dataset["evolutions"][pkmID][2] <= level_cap:
+            if (dataset["evolutions"][pkmID][1] == 'level-up' and dataset["evolutions"][pkmID][2] <= level_cap) or (dataset["evolutions"][pkmID][1] == "use-item" and dataset["evolutions"][pkmID][2] in available_ev_obj):
                 pkmID = str(dataset["evolutions"][pkmID][0])
             else:
                 break
@@ -193,6 +194,8 @@ def simulate_battle(team: list, rival_team: list, available_mt: list,dataset: ob
 
         player_damage = round(activePkm_attack[1] * 100)
         rival_damage = round(activePkm_rival_attack[1] * 100)
+
+        # Guardar quién atacó en este turno para tenerlo en cuenta en el siguiente
 
         # Perform first move and reduce hp
         if player_first:
@@ -268,7 +271,8 @@ def calculate_fitness(individual:list, dataset):
         simulation = simulate_battle(
                 team=teams[i], 
                 rival_team=TRAINERS[TRAINERS_ORDER[i]], 
-                available_mt=AVAILABLE_MT_TRAINERS[TRAINERS_ORDER[i]], 
+                available_mt=AVAILABLE_MT_TRAINERS[TRAINERS_ORDER[i]],
+                available_ev_obj=AVAILABLE_EVOLVE_OBJ_TRAINERS[TRAINERS_ORDER[i]], 
                 dataset=dataset, 
                 verbose=True
             )
@@ -311,7 +315,7 @@ fitness_value = calculate_fitness(
             [1, 2, 3, 4, 5, 6],
             [1, 2, 3, 4, 5, 6],
             [1, 2, 3, 4, 5, 6],
-            [1, 2, 3, 4, 5, 6],
+            [1, 2, 3, 4, 5, 29],
         ]
     ], dataset=dataset)
 
