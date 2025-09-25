@@ -88,8 +88,7 @@ def select_best_attack(attacker:object, target:object):
                 "level": attacker["level"],
             }
         ,target, move=move)
-        if move == "hyper-beam":
-            lostHP = lostHP // 2
+        
         if(lostHP > best_move[1]):
             best_move = (move, lostHP)
     return best_move
@@ -109,6 +108,16 @@ def select_level_cap(rival_team:object):
             max_level = pkm["level"]
     return max_level
 
+def cure_with_drain_move(attacker_name, attack, real_damage, hp, total_damage, drain_attacks, verbose=False):
+    move_name = attack[0]
+    if move_name in drain_attacks and real_damage > 0:
+        heal = real_damage // 2
+        recovered = min(100 - hp, heal)
+        hp += recovered
+        total_damage -= recovered
+        if verbose and recovered > 0:
+            print(f"{attacker_name} recovers {recovered} HP with {move_name}")
+    return hp, total_damage
 
 def simulate_battle(team: list, rival_team: list, available_mt: list, available_ev_obj: list,dataset: object, verbose:bool):
     '''
@@ -144,6 +153,8 @@ def simulate_battle(team: list, rival_team: list, available_mt: list, available_
     damage_rival_team = 0
 
     turn = 0
+
+    drain_attacks = ["absorb", "mega-drain", "giga-drain"]
 
     while damage_team < totalHP_team and damage_rival_team < totalHP_rival_team :
         # New turn
@@ -203,39 +214,127 @@ def simulate_battle(team: list, rival_team: list, available_mt: list, available_
             if verbose:
                 print(activePkm["species"], "attacks with", activePkm_attack)
             if active_rival_HP <= player_damage:
+                real_damage = active_rival_HP
                 damage_rival_team += active_rival_HP
                 active_rival_HP = 0
+                # Cure player if drain attack
+                active_HP, damage_team = cure_with_drain_move(
+                    attacker_name=activePkm["species"],
+                    attack=activePkm_attack,
+                    real_damage=real_damage,
+                    hp=active_HP,
+                    total_damage=damage_team,
+                    drain_attacks=drain_attacks,
+                    verbose=verbose
+                )
             else:
-                if verbose:
-                    print(rival_team[rival_selected_pos]["species"], "attacks with", activePkm_rival_attack)
+                real_damage = player_damage
                 damage_rival_team += player_damage
                 active_rival_HP -= player_damage
+                # Cure player if drain attack
+                active_HP, damage_team = cure_with_drain_move(
+                    attacker_name=activePkm["species"],
+                    attack=activePkm_attack,
+                    real_damage=real_damage,
+                    hp=active_HP,
+                    total_damage=damage_team,
+                    drain_attacks=drain_attacks,
+                    verbose=verbose
+                )
                 # Rival attacks back
+                if verbose:
+                    print(rival_team[rival_selected_pos]["species"], "attacks with", activePkm_rival_attack)
                 if active_HP <= rival_damage:
+                    real_damage = active_HP
                     damage_team += active_HP
                     active_HP = 0
+                    # Cure rival if drain attack
+                    active_rival_HP, damage_rival_team = cure_with_drain_move(
+                        attacker_name=rival_team[rival_selected_pos]["species"],
+                        attack=activePkm_rival_attack,
+                        real_damage=real_damage,
+                        hp=active_rival_HP,
+                        total_damage=damage_rival_team,
+                        drain_attacks=drain_attacks,
+                        verbose=verbose
+                    )
                 else:
+                    real_damage = rival_damage
                     damage_team += rival_damage
                     active_HP -= rival_damage
+                    # Cure rival if drain attack
+                    active_rival_HP, damage_rival_team = cure_with_drain_move(
+                        attacker_name=rival_team[rival_selected_pos]["species"],
+                        attack=activePkm_rival_attack,
+                        real_damage=real_damage,
+                        hp=active_rival_HP,
+                        total_damage=damage_rival_team,
+                        drain_attacks=drain_attacks,
+                        verbose=verbose
+                    )
         else:
             # Rival attacks first
             if verbose:
                 print(rival_team[rival_selected_pos]["species"], "attacks with", activePkm_rival_attack)
             if active_HP <= rival_damage:
+                real_damage = active_HP
                 damage_team += active_HP
                 active_HP = 0
+                # Cure rival if drain attack
+                active_rival_HP, damage_rival_team = cure_with_drain_move(
+                    attacker_name=rival_team[rival_selected_pos]["species"],
+                    attack=activePkm_rival_attack,
+                    real_damage=real_damage,
+                    hp=active_rival_HP,
+                    total_damage=damage_rival_team,
+                    drain_attacks=drain_attacks,
+                    verbose=verbose
+                )
             else:
-                if verbose:
-                    print(activePkm["species"], "attacks with", activePkm_attack)
+                real_damage = rival_damage
                 damage_team += rival_damage
                 active_HP -= rival_damage
+                # Cure rival if drain attack
+                active_rival_HP, damage_rival_team = cure_with_drain_move(
+                    attacker_name=rival_team[rival_selected_pos]["species"],
+                    attack=activePkm_rival_attack,
+                    real_damage=real_damage,
+                    hp=active_rival_HP,
+                    total_damage=damage_rival_team,
+                    drain_attacks=drain_attacks,
+                    verbose=verbose
+                )
                 # Player attacks back
+                if verbose:
+                    print(activePkm["species"], "attacks with", activePkm_attack)
                 if active_rival_HP <= player_damage:
+                    real_damage = active_rival_HP
                     damage_rival_team += active_rival_HP
                     active_rival_HP = 0
+                    # Cure player if drain attack
+                    active_HP, damage_team = cure_with_drain_move(
+                        attacker_name=activePkm["species"],
+                        attack=activePkm_attack,
+                        real_damage=real_damage,
+                        hp=active_HP,
+                        total_damage=damage_team,
+                        drain_attacks=drain_attacks,
+                        verbose=verbose
+                    )
                 else:
+                    real_damage = player_damage
                     damage_rival_team += player_damage
                     active_rival_HP -= player_damage
+                    # Cure player if drain attack
+                    active_HP, damage_team = cure_with_drain_move(
+                        attacker_name=activePkm["species"],
+                        attack=activePkm_attack,
+                        real_damage=real_damage,
+                        hp=active_HP,
+                        total_damage=damage_team,
+                        drain_attacks=drain_attacks,
+                        verbose=verbose
+                    )
 
         if verbose:
             print(activePkm["species"], "HP", active_HP)
@@ -302,20 +401,20 @@ fitness_value = calculate_fitness(
     individual=[
         [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36],
         [
-            [1, 2, 3, 4, 5],
-            [1, 2, 3, 4, 5, 6],
-            [1, 2, 3, 4, 5, 6],
-            [1, 2, 3, 4, 5, 6],
-            [1, 2, 3, 4, 5, 6],
-            [1, 2, 3, 4, 5, 6],
-            [1, 2, 3, 4, 5, 6],
-            [1, 2, 3, 4, 5, 6],
-            [1, 2, 3, 4, 5, 6],
-            [1, 2, 3, 4, 5, 6],
-            [1, 2, 3, 4, 5, 6],
-            [1, 2, 3, 4, 5, 6],
-            [1, 2, 3, 4, 5, 6],
-            [1, 2, 3, 4, 5, 29],
+            [1, 2, 3, 1, 2],
+            [1, 2, 3, 2, 2, 6],
+            [1, 2, 3, 2, 3, 6],
+            [1, 2, 3, 3, 3, 6],
+            [1, 2, 3, 2, 3, 6],
+            [1, 2, 3, 2, 3, 6],
+            [1, 2, 3, 2, 3, 6],
+            [1, 2, 3, 2, 3, 6],
+            [1, 2, 3, 2, 3, 6],
+            [1, 2, 3, 2, 3, 6],
+            [1, 2, 3, 2, 3, 6],
+            [1, 2, 3, 2, 3, 6],
+            [1, 2, 3, 2, 3, 6],
+            [1, 2, 3, 2, 3, 29],
         ]
     ], dataset=dataset)
 
