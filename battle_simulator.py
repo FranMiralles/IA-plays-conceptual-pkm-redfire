@@ -1,8 +1,11 @@
 import requests
 import statistics
 import json
-from route_data.trainers import TRAINERS, TRAINERS_ORDER
+from route_data.trainers import TRAINERS, TRAINERS_ORDER, PREVIOUS_ROUTES_TO_TRAINER
+from route_data.routes import ROUTES_ORDER
+from route_data.mt_moves import AVAILABLE_MT_TRAINERS
 import time
+import math
 
 # In this version, in pkm battles the individuals only choose the team used in a gym. Attacks used are selected among the possible ones maximizing damage dealt to the rival's pkm. Also, current pkm cannot switch so the current pkm steals being the current one until the battle finishes or the pkm is dead.
 
@@ -84,6 +87,8 @@ def select_best_attack(attacker:object, target:object):
                 "level": attacker["level"],
             }
         ,target, move=move)
+        if move == "hyper-beam":
+            lostHP = lostHP // 2
         if(lostHP > best_move[1]):
             best_move = (move, lostHP)
     return best_move
@@ -104,7 +109,7 @@ def select_level_cap(rival_team:object):
     return max_level
 
 
-def simulate_battle(team: list, rival_team: list, dataset: object, debug:bool):
+def simulate_battle(team: list, rival_team: list, available_mt: list,dataset: object, verbose:bool):
     '''
         team: list of int idPkm
         rival_team: list of objects
@@ -142,26 +147,33 @@ def simulate_battle(team: list, rival_team: list, dataset: object, debug:bool):
     while damage_team < totalHP_team and damage_rival_team < totalHP_rival_team :
         # New turn
         turn += 1
-        if debug:
+        if verbose:
             print("TURNO", turn)
             print("**********************")
         
         # Select the active pkm and the rival one
         activePkmID = team[damage_team // 100]
         active_HP = 100 - (damage_team % 100)
-        
         activePkm = {
             "species": dataset["pkdex"][str(activePkmID)]["name"],
             "level": level_cap,
             "ability": dataset["pkdex"][str(activePkmID)]["abilities"],
             "speed": calculate_speed(dataset["pkdex"][str(activePkmID)]["speed"], level_cap),
-            "moves": [move_key for move_key, move_value in dataset["pkdex"][str(activePkmID)]["moves"].items() if (move_value["level"] <= level_cap or move_value["method"] == "machine")]
+            "moves": 
+                    [move_key 
+                        for move_key, move_value in dataset["pkdex"][str(activePkmID)]["moves"].items() 
+                            if (
+                                (move_value["level"] <= level_cap and move_value["method"] == "level-up") 
+                                or 
+                                (move_value["method"] == "machine" and move_key in available_mt)
+                                )
+                    ]
         }
         
         rival_selected_pos = damage_rival_team // 100
         active_rival_HP = 100 - (damage_rival_team % 100)
         
-        if debug:
+        if verbose:
             print(activePkm["species"], "HP", active_HP)
             print(rival_team[rival_selected_pos]["species"], "HP", active_rival_HP)
         
@@ -185,13 +197,13 @@ def simulate_battle(team: list, rival_team: list, dataset: object, debug:bool):
         # Perform first move and reduce hp
         if player_first:
             # Player attacks first
-            if debug:
+            if verbose:
                 print(activePkm["species"], "attacks with", activePkm_attack)
             if active_rival_HP <= player_damage:
                 damage_rival_team += active_rival_HP
                 active_rival_HP = 0
             else:
-                if debug:
+                if verbose:
                     print(rival_team[rival_selected_pos]["species"], "attacks with", activePkm_rival_attack)
                 damage_rival_team += player_damage
                 active_rival_HP -= player_damage
@@ -204,13 +216,13 @@ def simulate_battle(team: list, rival_team: list, dataset: object, debug:bool):
                     active_HP -= rival_damage
         else:
             # Rival attacks first
-            if debug:
+            if verbose:
                 print(rival_team[rival_selected_pos]["species"], "attacks with", activePkm_rival_attack)
             if active_HP <= rival_damage:
                 damage_team += active_HP
                 active_HP = 0
             else:
-                if debug:
+                if verbose:
                     print(activePkm["species"], "attacks with", activePkm_attack)
                 damage_team += rival_damage
                 active_HP -= rival_damage
@@ -222,13 +234,13 @@ def simulate_battle(team: list, rival_team: list, dataset: object, debug:bool):
                     damage_rival_team += player_damage
                     active_rival_HP -= player_damage
 
-        if debug:
+        if verbose:
             print(activePkm["species"], "HP", active_HP)
             print(rival_team[rival_selected_pos]["species"], "HP", active_rival_HP)
 
     end = time.perf_counter()
     elapsed_seconds = end - start
-    if debug:
+    if verbose:
         print(f"Tiempo total: {elapsed_seconds:.6f} s")
     
     player_wins = (damage_team < totalHP_team)
@@ -242,52 +254,65 @@ def calculate_fitness(individual:list, dataset):
     pkm_catched = individual[0]
     fitness_value = 0
 
+    for i in range(0, len(pkm_catched)):
+        print(ROUTES_ORDER[i], ": ", pkm_catched[i])
     start = time.perf_counter()
 
     teams = individual[1]
-    simulations = []
     for i in range(0, len(teams)):
-        simulations.append(simulate_battle(team=teams[i], rival_team=TRAINERS[TRAINERS_ORDER[i]], dataset=dataset, debug=True))
-
-    for simulation in simulations:
-        print(simulation)
+        pkm_catched_previously = pkm_catched[:PREVIOUS_ROUTES_TO_TRAINER[TRAINERS_ORDER[i]]]
+        # Comprobar que el equipo utilizado ha sido atrapado, sino penalizar con + INF y dejar de calcular
+        for pkm in teams[i]:
+            if(pkm not in pkm_catched_previously):
+                return float('inf')
+        simulation = simulate_battle(
+                team=teams[i], 
+                rival_team=TRAINERS[TRAINERS_ORDER[i]], 
+                available_mt=AVAILABLE_MT_TRAINERS[TRAINERS_ORDER[i]], 
+                dataset=dataset, 
+                verbose=True
+            )
         if(not simulation[0]):
             fitness_value += 10000
         else:
             fitness_value += simulation[1]
 
-    print(fitness_value)
+    
 
     end = time.perf_counter()
     elapsed_seconds = end - start
     print(elapsed_seconds)
 
+    return fitness_value
+
 
 dataset = load_json_in_dataset()
 
 
-# (passed, damage_lost) = simulate_battle([1, 1, 1, 1, 1, 1], TRAINERS["GYM_CARMIN"], dataset=dataset, debug=True)
+# (passed, damage_lost) = simulate_battle([1, 1, 1, 1, 1, 1], TRAINERS["GYM_CARMIN"], dataset=dataset, verbose=True)
 # print("RESULTADOS")
 # print(passed)
 # print(damage_lost)
 
-calculate_fitness(
+fitness_value = calculate_fitness(
     individual=[
-        [1,2,3,4,5,6,7,8,9],
+        [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36],
         [
-            [1, 4, 7, 30, 79, 45],
-            [1, 4, 7, 30, 79, 45],
-            [1, 4, 7, 30, 79, 45],
-            [1, 4, 7, 30, 79, 45],
-            [1, 4, 7, 30, 79, 45],
-            [1, 4, 7, 30, 79, 45],
-            [1, 4, 7, 30, 79, 45],
-            [1, 4, 7, 30, 79, 45],
-            [1, 4, 7, 30, 79, 45],
-            [1, 4, 7, 30, 79, 45],
-            [1, 4, 7, 30, 79, 45],
-            [1, 4, 7, 30, 79, 45],
-            [1, 4, 7, 30, 79, 45],
-            [1, 4, 7, 30, 79, 45],
+            [1, 2, 3, 4, 5],
+            [1, 2, 3, 4, 5, 6],
+            [1, 2, 3, 4, 5, 6],
+            [1, 2, 3, 4, 5, 6],
+            [1, 2, 3, 4, 5, 6],
+            [1, 2, 3, 4, 5, 6],
+            [1, 2, 3, 4, 5, 6],
+            [1, 2, 3, 4, 5, 6],
+            [1, 2, 3, 4, 5, 6],
+            [1, 2, 3, 4, 5, 6],
+            [1, 2, 3, 4, 5, 6],
+            [1, 2, 3, 4, 5, 6],
+            [1, 2, 3, 4, 5, 6],
+            [1, 2, 3, 4, 5, 6],
         ]
     ], dataset=dataset)
+
+print(fitness_value)

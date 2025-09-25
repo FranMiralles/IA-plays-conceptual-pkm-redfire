@@ -407,6 +407,7 @@ TRAINERS = {
     ]
 }
 
+# Incluye en cuántas previas pueden atraparse 
 TRAINERS_ORDER = [
     "GYM_PLATEADA",
     "GYM_CELESTE",
@@ -424,10 +425,26 @@ TRAINERS_ORDER = [
     "ALTO_MANDO_LANCE"
 ]
 
+PREVIOUS_ROUTES_TO_TRAINER = {
+    "GYM_PLATEADA": 5,
+    "GYM_CELESTE": 10,
+    "GYM_CARMIN": 14,
+    "GYM_AZULONA": 21,
+    "GIOVANNI_AZULONA": 21,
+    "GIOVANNI_AZAFRAN": 28,
+    "GYM_FUCSIA": 28,
+    "GYM_AZAFRAN": 28,
+    "GYM_CANELA": 34,
+    "GYM_VERDE": 34,
+    "ALTO_MANDO_LORELEI": 36,
+    "ALTO_MANDO_BRUNO": 36,
+    "ALTO_MANDO_AGATHA": 36,
+    "ALTO_MANDO_LANCE": 36
+}
 
 
 
-
+'''
 import tkinter as tk
 from PIL import Image, ImageTk, ImageSequence
 import requests
@@ -455,3 +472,4 @@ def animar(i=0):
 
 animar()
 root.mainloop()
+'''

@@ -91,6 +91,8 @@ ROUTES_ORDER = [
     "CALLE VICTORIA"
 ]
 
+
+'''
 print(list(ROUTES.keys()))
 import random
 
@@ -126,3 +128,6 @@ for i, comb in enumerate(res, 1):
         print(f"  {ruta}: {elegido}")
         
 print("\nPokémon que nunca fueron elegidos:", no_usados)
+
+
+'''
