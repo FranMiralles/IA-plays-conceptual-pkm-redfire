@@ -49,7 +49,9 @@ def save_pokedex():
             pkm["name"] = result["species"]["name"].capitalize()
             pkm["types"] = [t["type"]["name"] for t in result["types"]]
             pkm["abilities"] = result["abilities"][0]["ability"]["name"]
-            pkm["sprite"] = result["sprites"]["front_default"]
+            pkm["sprite"] = {}
+            pkm["sprite"]["front"] = result["sprites"]["versions"]["generation-v"]["black-white"]["animated"]["front_default"]
+            pkm["sprite"]["back"] = result["sprites"]["versions"]["generation-v"]["black-white"]["animated"]["back_default"]
             pkm["speed"] = result["stats"][5]["base_stat"]
             pkm["moves"] = {}
 
