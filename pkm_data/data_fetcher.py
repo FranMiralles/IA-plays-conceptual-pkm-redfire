@@ -1,5 +1,8 @@
+import base64
 import requests
 import json
+import os
+import time
 
 def guardar_json(datos, nombre_archivo):
     try:
@@ -50,8 +53,8 @@ def save_pokedex():
             pkm["types"] = [t["type"]["name"] for t in result["types"]]
             pkm["abilities"] = result["abilities"][0]["ability"]["name"]
             pkm["sprite"] = {}
-            pkm["sprite"]["front"] = result["sprites"]["versions"]["generation-v"]["black-white"]["animated"]["front_default"]
-            pkm["sprite"]["back"] = result["sprites"]["versions"]["generation-v"]["black-white"]["animated"]["back_default"]
+            pkm["sprite"]["front"] = f"./pkm_data/sprites/{i}_front.gif"
+            pkm["sprite"]["back"] = f"./pkm_data/sprites/{i}_back.gif"
             pkm["speed"] = result["stats"][5]["base_stat"]
             pkm["moves"] = {}
 
@@ -146,16 +149,65 @@ def save_evolutions():
 
     guardar_json(evolutions, "./pkm_data/evolutions.json")
 
+def save_sprites():
+    # --- Cargar la pokédex ---
+    pkdex_path = "./pkm_data/pkdex.json"
+    if not os.path.exists(pkdex_path):
+        print("No existe el archivo de Pokédex. Ejecuta primero save_pokedex().")
+        return
+
+    with open(pkdex_path, "r", encoding="utf-8") as f:
+        pkdex = json.load(f)
+
+    # --- Carpeta sprites ---
+    os.makedirs("./pkm_data/sprites", exist_ok=True)
+
+    for i, pkm in pkdex.items():
+        for orientation in ("front", "back"):
+            sprite_path = pkm["sprite"][orientation]
+
+            # Si ya existe el archivo y no está vacío → lo saltamos
+            if os.path.exists(sprite_path) and os.path.getsize(sprite_path) > 0:
+                continue
+
+            # Buscar la URL desde la API (porque en el JSON solo está la ruta local)
+            try:
+                res = requests.get(f"https://pokeapi.co/api/v2/pokemon/{i}", timeout=10)
+                res.raise_for_status()
+                result = res.json()
+            except Exception as e:
+                print(f"[{i}] Error al obtener datos del Pokémon para sprites: {e}")
+                continue
+
+            url = result["sprites"]["versions"]["generation-v"]["black-white"]["animated"].get(f"{orientation}_default")
+
+            if not url:
+                print(f"[{i}] No hay sprite {orientation}")
+                continue
+
+            try:
+                print(f"[{i}] Descargando sprite {orientation}...")
+                data = requests.get(url, timeout=10).content
+                with open(sprite_path, "wb") as f:
+                    f.write(data)
+            except Exception as e:
+                print(f"[{i}] Error al descargar sprite {orientation}: {e}")
+                continue
+
+            # Pequeña pausa para no saturar la API
+            time.sleep(0.2)
+
 while True:
     print("Script para obtener datos de la POKE API")
     print("Qué datos quieres guardar?")
     print("1. Pokédex 1-151 pokémon")
-    print("2. Movimientos")
-    print("3. Evoluciones")
-    print("4. Exit")
+    print("2. Sprites animados")
+    print("3. Movimientos")
+    print("4. Evoluciones")
+    print("5. Exit")
 
     option = input("Selecciona una opción: ")
-    if option != "1" and option != "2" and option != "3" and option != "4":
+    if option != "1" and option != "2" and option != "3" and option != "4" and option != "5":
         print("Opción no válida")
         exit()
 
@@ -164,9 +216,11 @@ while True:
     if option == 1:
         save_pokedex()
     elif option == 2:
-        save_moves()
+        save_sprites()
     elif option == 3:
-        save_evolutions()
+        save_moves()
     elif option == 4:
+        save_evolutions()
+    elif option == 5:
         print("Saliendo del menú")
         exit()

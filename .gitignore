@@ -48,3 +48,9 @@ Thumbs.db
 
 # Carpeta de Python específica para entornos virtuales
 .python-version
+
+
+#GIFS
+
+*/sprites/*
+*.gif
