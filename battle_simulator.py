@@ -132,7 +132,6 @@ def simulate_battle(team: list, rival_team: list, available_mt: list, available_
                     - moves.json to object
                     - pkdex.json to object
     '''
-    start = time.perf_counter()
     level_cap = select_level_cap(rival_team)
 
     logs = []
@@ -333,17 +332,13 @@ def simulate_battle(team: list, rival_team: list, available_mt: list, available_
 
         logs.append(activePkm["species"] + " HP " + str(active_HP))
         logs.append(rival_team[rival_selected_pos]["species"] + " HP " + str(active_rival_HP))
-
-    end = time.perf_counter()
-    elapsed_seconds = end - start
-    logs.append(f"Tiempo total: {elapsed_seconds:.6f} s")
     
     player_wins = (damage_team < totalHP_team)
 
     if verbose:
         for log in logs:
             print(log)
-    return (player_wins, damage_team)
+    return (player_wins, damage_team, logs)
 
 def calculate_fitness(individual:list, dataset, verbose: bool):
     '''
@@ -353,10 +348,7 @@ def calculate_fitness(individual:list, dataset, verbose: bool):
     pkm_catched = individual[0]
     fitness_value = 0
     feasibility = True
-
-
-    for i in range(0, len(pkm_catched)):
-        print(ROUTES_ORDER[i], ": ", pkm_catched[i])
+    entire_logs = []
     
     start = time.perf_counter()
 
@@ -366,20 +358,21 @@ def calculate_fitness(individual:list, dataset, verbose: bool):
         # Comprobar que el equipo utilizado ha sido atrapado, sino penalizar con + INF y dejar de calcular
         for pkm in teams[i]:
             if(pkm not in pkm_catched_previously):
-                return (False, float('inf'))
-        simulation = simulate_battle(
+                return (False, float('inf'), entire_logs)
+        (player_wins, damage_team, logs) = simulate_battle(
                 team=teams[i], 
                 rival_team=TRAINERS[TRAINERS_ORDER[i]], 
                 available_mt=AVAILABLE_MT_TRAINERS[TRAINERS_ORDER[i]],
                 available_ev_obj=AVAILABLE_EVOLVE_OBJ_TRAINERS[TRAINERS_ORDER[i]], 
                 dataset=dataset, 
                 verbose=verbose
-            )
-        if(not simulation[0]):
+        )
+        entire_logs += logs
+        if not player_wins:
             feasibility = False
             fitness_value += 10000
         else:
-            fitness_value += simulation[1]
+            fitness_value += damage_team
 
     
 
@@ -387,18 +380,13 @@ def calculate_fitness(individual:list, dataset, verbose: bool):
     elapsed_seconds = end - start
     print(elapsed_seconds)
 
-    return (feasibility, fitness_value)
+    return (feasibility, fitness_value, entire_logs)
 
 
 dataset = load_json_in_dataset()
 
 
-# (passed, damage_lost) = simulate_battle([1, 1, 1, 1, 1, 1], TRAINERS["GYM_CARMIN"], dataset=dataset, verbose=True)
-# print("RESULTADOS")
-# print(passed)
-# print(damage_lost)
-
-
+'''
 feasibility, fitness_value = calculate_fitness(
     individual=[
         [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36],
@@ -422,3 +410,4 @@ feasibility, fitness_value = calculate_fitness(
 
 print(fitness_value)
 print(feasibility)
+'''

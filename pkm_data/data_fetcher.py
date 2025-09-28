@@ -54,8 +54,8 @@ def save_pokedex():
             pkm["types"] = [t["type"]["name"] for t in result["types"]]
             pkm["abilities"] = result["abilities"][0]["ability"]["name"]
             pkm["sprite"] = {}
-            pkm["sprite"]["front"] = f"./pkm_data/sprites/{i}_front.gif"
-            pkm["sprite"]["back"] = f"./pkm_data/sprites/{i}_back.gif"
+            pkm["sprite"]["front"] = f"./pkm_data/normalized_sprites/{i}_front.gif"
+            pkm["sprite"]["back"] = f"./pkm_data/normalized_sprites/{i}_back.gif"
             pkm["speed"] = result["stats"][5]["base_stat"]
             pkm["moves"] = {}
 
@@ -208,7 +208,7 @@ def normalize_sprites():
     # Max dimensions
     max_width, max_height = 0, 0
     for file in os.listdir(input_folder):
-        if file.lower().endswith(".gif") and not file.lower().endswith("pokeball_loading.gif"):
+        if file.lower().endswith(".gif"):
             with Image.open(os.path.join(input_folder, file)) as img:
                 w, h = img.size
                 if w > max_width:

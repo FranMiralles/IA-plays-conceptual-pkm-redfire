@@ -6,8 +6,9 @@ from PyQt5.QtCore import Qt
 import requests
 from io import BytesIO
 from tempfile import NamedTemporaryFile
-from battle_simulator import dataset
+from battle_simulator import *
 from individual import INDIVIDUAL
+from route_data.trainers import PREVIOUS_ROUTES_TO_TRAINER, TRAINERS_ORDER
 
 STYLE_SHEET = """
             /* Estilos modernos */
@@ -86,50 +87,65 @@ STYLE_SHEET = """
         """
 
 PK_POSITIONS=[
-    (0.204, 0.719), # PUEBLO PALETA
-    (0.204, 0.625), # RUTA 1
-    (0.122, 0.545), # RUTA 22
-    (0.204, 0.49), # RUTA 2
-    (0.204, 0.41), # BOSQUE VERDE
-    (0.285, 0.327), # RUTA 3
-    (0.51, 0.27), # RUTA 4
-    (0.41, 0.27), # MONTE MOON
-    (0.62, 0.208), # RUTA 24
-    (0.7, 0.16), # RUTA 25
-    (0.62, 0.3495), # RUTA 5
-    (0.62, 0.518), # RUTA 6
-    (0.726, 0.605), # RUTA 11
-    (0.662, 0.605), # CUEVA DIGLETT
-    (0.7, 0.27), # RUTA 9
-    (0.787, 0.376), # RUTA 10
-    (0.787, 0.27), # TUNEL ROCA
-    (0.7, 0.44), # RUTA 8
-    (0.555, 0.44), # RUTA 7
-    (0.41, 0.44), # RUTA 16
-    (0.787, 0.44), # TORRE POKEMON
-    (0.787, 0.605), # RUTA 12
-    (0.726, 0.718), # RUTA 13
-    (0.662, 0.718), # RUTA 14
-    (0.62, 0.775), # RUTA 15
-    (0.537, 0.775), # ZONA SAFARI
-    (0.41, 0.775), # RUTA 18
-    (0.33, 0.605), # RUTA 17
-    (0.537, 0.885), # RUTA 19
-    (0.45, 0.885), # RUTA 20
-    (0.204, 0.795), # RUTA 21
-    (0.36, 0.885), # ISLAS ESPUMA
-    (0.204, 0.885), # MANSION PKM
-    (0.787, 0.323), # CENTRAL ENERGIA
-    (0.122, 0.44), # RUTA 23
-    (0.122, 0.327), # CALLE VICTORIA
+    (0.181, 0.629), # PUEBLO PALETA
+    (0.181, 0.535), # RUTA 1
+    (0.099, 0.455), # RUTA 22
+    (0.181, 0.4), # RUTA 2
+    (0.181, 0.32), # BOSQUE VERDE
+    (0.262, 0.237), # RUTA 3
+    (0.487, 0.18), # RUTA 4
+    (0.387, 0.18), # MONTE MOON
+    (0.597, 0.118), # RUTA 24
+    (0.677, 0.07), # RUTA 25
+    (0.597, 0.2595), # RUTA 5
+    (0.597, 0.428), # RUTA 6
+    (0.703, 0.515), # RUTA 11
+    (0.639, 0.515), # CUEVA DIGLETT
+    (0.677, 0.18), # RUTA 9
+    (0.764, 0.286), # RUTA 10
+    (0.764, 0.18), # TUNEL ROCA
+    (0.677, 0.35), # RUTA 8
+    (0.532, 0.35), # RUTA 7
+    (0.387, 0.35), # RUTA 16
+    (0.764, 0.35), # TORRE POKEMON
+    (0.764, 0.515), # RUTA 12
+    (0.703, 0.628), # RUTA 13
+    (0.639, 0.628), # RUTA 14
+    (0.597, 0.685), # RUTA 15
+    (0.514, 0.685), # ZONA SAFARI
+    (0.387, 0.685), # RUTA 18
+    (0.307, 0.515), # RUTA 17
+    (0.514, 0.795), # RUTA 19
+    (0.427, 0.795), # RUTA 20
+    (0.181, 0.705), # RUTA 21
+    (0.337, 0.795), # ISLAS ESPUMA
+    (0.181, 0.795), # MANSION PKM
+    (0.764, 0.233), # CENTRAL ENERGIA
+    (0.099, 0.35), # RUTA 23
+    (0.099, 0.237), # CALLE VICTORIA
 ]
 
+ROUTE_NAMES = [
+    "PUEBLO PALETA", "RUTA 1", "RUTA 22", "RUTA 2", "BOSQUE VERDE",
+    "RUTA 3", "RUTA 4", "MONTE MOON", "RUTA 24", "RUTA 25",
+    "RUTA 5", "RUTA 6", "RUTA 11", "CUEVA DIGLETT", "RUTA 9",
+    "RUTA 10", "TUNEL ROCA", "RUTA 8", "RUTA 7", "RUTA 16",
+    "TORRE POKEMON", "RUTA 12", "RUTA 13", "RUTA 14", "RUTA 15",
+    "ZONA SAFARI", "RUTA 18", "RUTA 17", "RUTA 19", "RUTA 20",
+    "RUTA 21", "ISLAS ESPUMA", "MANSION PKM", "CENTRAL ENERGIA",
+    "RUTA 23", "CALLE VICTORIA"
+]
+
+def select_direction(route_name: str):
+    if route_name in ["PUEBLO PALETA", "RUTA 1", "RUTA 21", "MANSION PKM", "RUTA 5", "RUTA 6", "RUTA 14"]:
+        return "left"
+        pass
+
 class MapPanel(QWidget):
-    def __init__(self, pkGIFList: list):
+    def __init__(self, pkGIFList: list, feasibility: bool):
         super().__init__()
 
         self.setMouseTracking(True)
-        self.normalize = False
         # --- Imagen base ---
         self.map_label = QLabel(self)
         self.pixmap = QPixmap("images/map.png")
@@ -138,15 +154,30 @@ class MapPanel(QWidget):
 
         # Widgets que representan cada ruta (gif o texto)
         self.route_widgets = []
-        for pkGIF in pkGIFList:
+        for i, pkGIF in enumerate(pkGIFList):
             gif_label = QLabel(self)
             movie = QMovie(pkGIF)
             gif_label.setMovie(movie)
             movie.start()
-            self.route_widgets.append((gif_label, movie))
+
+            name_label = QLabel(ROUTE_NAMES[i], self)
+            name_label.setStyleSheet("color: white; background-color: rgba(0,0,0,150); padding: 2px;")
+            name_label.adjustSize()
+            
+            name_label_direction = select_direction(ROUTE_NAMES[i])
+
+            if pkGIF in ["./pkm_data/manual_sprites/not_captured.gif",
+                        "./pkm_data/manual_sprites/not_captured_yet.gif"]:
+                self.route_widgets.append((gif_label, movie, "ball", name_label))
+            else:
+                self.route_widgets.append((gif_label, movie, "pkm", name_label))
 
         # --- Texto ---
-        self.text_label = QLabel("Individuo: Factible", self)
+        if feasibility:
+            self.text_label = QLabel("Individuo: Factible", self)
+        else:
+            self.text_label = QLabel("Individuo: No factible", self)
+
         self.text_label.setStyleSheet("color: white; background-color: rgba(0,0,0,150); padding: 4px;")
         self.pos_text = (0, 0)
 
@@ -158,23 +189,30 @@ class MapPanel(QWidget):
         self.map_label.resize(w, h)
 
         # Calcular tamaño relativo para los GIFs / labels
-        if self.normalize:
-            reducer_gif = 1.1
-        else:
-            reducer_gif = 0.75
-        widget_size = int(w * 0.075 * reducer_gif), int(h * 0.1 * reducer_gif)
+        increment_gif = 1
+        #widget_size_ball = int(w * 0.1 * reducer_gif), int(h * 0.15 * reducer_gif)
+        widget_size_pkm = int(w * 0.1 * increment_gif), int(h * 0.15 * increment_gif)
 
-        for i, (widget, movie) in enumerate(self.route_widgets):
-            if self.normalize:
-                x = int(w * (PK_POSITIONS[i][0]- 0.028))
-                y = int(h * (PK_POSITIONS[i][1]- 0.088))
-            else: 
+        for i, (widget, movie, type, name_label) in enumerate(self.route_widgets):
+            if type == "pkm":
                 x = int(w * PK_POSITIONS[i][0])
-                y = int(h * (PK_POSITIONS[i][1] - 0.005))
+                y = int(h * PK_POSITIONS[i][1])
+                name_label.move(int(x - name_label.width() + w * 0.02), int(y - name_label.height() + h * 0.15))
+            else:
+                x = int(w * PK_POSITIONS[i][0])
+                y = int(h * (PK_POSITIONS[i][1] + 0.05))
+                name_label.move(int(x - name_label.width() + w * 0.02), int(y - name_label.height() + h * 0.1))
 
+            widget.resize(*widget_size_pkm)
             widget.move(x, y)
-            widget.resize(*widget_size)
             movie.setScaledSize(widget.size())
+
+            # Label a la izquierda del GIF
+            #name_label.move(x - name_label.width(), y + widget.height()//2 - name_label.height()//2)
+            
+            font_size = max(int(h * 0.02), 7)
+            name_label.setFont(QFont("Arial", font_size))
+            name_label.adjustSize()
 
         # --- Texto general ---
         self.text_label.move(int(w * self.pos_text[0]), int(h * self.pos_text[1]))
@@ -185,34 +223,44 @@ class MapPanel(QWidget):
     def update_MapPanel(self, pkGIFList: list):
         """Actualiza la lista de sprites mostrados en el mapa"""
         # Eliminar los widgets anteriores
-        print(pkGIFList)
-        for widget, movie in self.route_widgets:
+        for widget, movie, type, name_label in self.route_widgets:
             widget.setParent(None)
             movie.stop()
+            name_label.setParent(None)
 
         self.route_widgets = []
 
         # Crear los nuevos
-        for pkGIF in pkGIFList:
+        for i, pkGIF in enumerate(pkGIFList):
             gif_label = QLabel(self)
             movie = QMovie(pkGIF)
             gif_label.setMovie(movie)
             movie.start()
             gif_label.show()
-            self.route_widgets.append((gif_label, movie))
+
+            name_label = QLabel(ROUTE_NAMES[i], self)
+            name_label.setStyleSheet("color: white; background-color: rgba(0,0,0,150); padding: 2px;")
+            name_label.adjustSize()
+            name_label.show()
+
+            if pkGIF in ["./pkm_data/manual_sprites/not_captured.gif",
+                        "./pkm_data/manual_sprites/not_captured_yet.gif"]:
+                self.route_widgets.append((gif_label, movie, "ball", name_label))
+            else:
+                self.route_widgets.append((gif_label, movie, "pkm", name_label))
 
         # Forzar redibujo y reposicionamiento
         self.update()
         self.resizeEvent(None)
 
 class App(QWidget):
-    def __init__(self, individual):
+    def __init__(self, individual, feasibility, fitness_value, entire_logs):
         super().__init__()
 
         self.pkGIFList = []
         for pkmID in individual[0]:
             if pkmID is None:
-                self.pkGIFList.append("./pkm_data/sprites/pokeball_loading.gif")
+                self.pkGIFList.append("./pkm_data/manual_sprites/not_captured.gif")
             else:
                 gif_path = dataset["pkdex"][str(pkmID)]["sprite"]["front"]
                 self.pkGIFList.append(gif_path)
@@ -229,7 +277,7 @@ class App(QWidget):
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
 
-        # ===== MENÚ PRINCIPAL =====
+        # Menú principal
         self.main_menu = QVBoxLayout()
         self.main_menu.setAlignment(Qt.AlignTop)
         self.main_menu.setSpacing(2)
@@ -246,8 +294,8 @@ class App(QWidget):
         self.btn_combat.setProperty("selected", False)
         
         # Conectar señales
-        self.btn_map.clicked.connect(lambda: self.show_submenu("mapa"))
-        self.btn_combat.clicked.connect(lambda: self.show_submenu("combates"))
+        self.btn_map.clicked.connect(lambda: self.show_submenu("mapa", individual=individual))
+        self.btn_combat.clicked.connect(lambda: self.show_submenu("combates", individual=individual))
 
         self.main_menu.addWidget(self.btn_map)
         self.main_menu.addWidget(self.btn_combat)
@@ -255,7 +303,7 @@ class App(QWidget):
         main_menu_widget = QWidget()
         main_menu_widget.setLayout(self.main_menu)
         main_menu_widget.setObjectName("main_menu")
-        main_menu_widget.setFixedWidth(200)
+        main_menu_widget.setFixedWidth(180)
 
         # ===== SUBMENÚ (dinámico con QStackedWidget) =====
         self.submenu_stack = QStackedWidget()
@@ -275,14 +323,14 @@ class App(QWidget):
         map_buttons = [
             "MAPA COMPLETO", "GYM PLATEADA", "GYM CELESTE", "GYM CARMIN", "GYM AZULONA",
             "GIOVANNI AZULONA", "GIOVANNI AZAFRAN", "GYM FUCSIA", "GYM AZAFRAN",
-            "GYM CANELA", "GYM VERDE", "LIGA POKEMON"
+            "GYM CANELA", "GYM VERDE", "LIGA POKÉMON"
         ]
         
         for name in map_buttons:
             btn = QPushButton(name)
             btn.setObjectName("sub_btn")
             btn.setProperty("selected", False)
-            btn.clicked.connect(lambda checked, btn=btn, menu_type="mapa", name=name: self.select_sub_button_mapa(btn, menu_type, name))
+            btn.clicked.connect(lambda checked, btn=btn, menu_type="mapa", name=name: self.select_sub_button_mapa(btn, menu_type, name, individual))
             submenu_map_layout.addWidget(btn)
             self.submenu_buttons["mapa"].append(btn)
             
@@ -318,7 +366,7 @@ class App(QWidget):
         self.submenu_stack.addWidget(submenu_combat)   # index 1
 
         # ===== PANEL CENTRAL =====
-        self.map_panel = MapPanel(self.pkGIFList)
+        self.map_panel = MapPanel(self.pkGIFList, feasibility)
 
         # Añadir al layout principal
         layout.addWidget(main_menu_widget)
@@ -326,11 +374,11 @@ class App(QWidget):
         layout.addWidget(self.map_panel, stretch=1)
 
         # Mostrar por defecto el menú de mapa y seleccionar opciones por defecto
-        self.show_submenu("mapa")
+        self.show_submenu("mapa", individual=individual)
 
         self.setStyleSheet(STYLE_SHEET)
 
-    def show_submenu(self, menu_type):
+    def show_submenu(self, menu_type, individual):
         """Muestra el submenú correspondiente y actualiza selección del botón principal"""
         # Resetear selección anterior del menú principal
         if self.selected_main_button:
@@ -343,17 +391,21 @@ class App(QWidget):
             self.submenu_stack.setCurrentIndex(0)
             self.selected_main_button = self.btn_map
             
-            # Seleccionar automáticamente "MAPA COMPLETO" si no hay nada seleccionado
-            if not self.selected_sub_buttons["mapa"]:
-                self.select_sub_button_mapa(self.submenu_buttons["mapa"][0], "mapa", "MAPA COMPLETO", force_select=True)
-                
+            # Forzar siempre selección del predeterminado "MAPA COMPLETO"
+            self.select_sub_button_mapa(
+                self.submenu_buttons["mapa"][0], "mapa", "MAPA COMPLETO",
+                individual=individual, force_select=True
+            )
+                        
         elif menu_type == "combates":
             self.submenu_stack.setCurrentIndex(1)
             self.selected_main_button = self.btn_combat
             
-            # Seleccionar automáticamente "GYM PLATEADA" si no hay nada seleccionado
-            if not self.selected_sub_buttons["combates"]:
-                self.select_sub_button(self.submenu_buttons["combates"][0], "combates", force_select=True)
+            # Forzar siempre selección del predeterminado "GYM PLATEADA"
+            self.select_sub_button(
+                self.submenu_buttons["combates"][0], "combates",
+                force_select=True
+            )
         
         # Aplicar estilo al botón principal seleccionado
         if self.selected_main_button:
@@ -361,7 +413,7 @@ class App(QWidget):
             self.selected_main_button.style().unpolish(self.selected_main_button)
             self.selected_main_button.style().polish(self.selected_main_button)
 
-    def select_sub_button_mapa(self, button, menu_type, name, force_select=False):
+    def select_sub_button_mapa(self, button, menu_type, name, individual, force_select=False):
         """Selecciona un botón del submenú"""
         # Si el botón ya está seleccionado y no es forzado, no hacer nada (no deseleccionar)
         if button.property("selected") and not force_select:
@@ -382,13 +434,23 @@ class App(QWidget):
         # Actualizar referencia al botón seleccionado
         self.selected_sub_buttons[menu_type] = button
         
-        print(name)
-        if(name == "GYM PLATEADA"):
-            self.pkGIFList = []
-            for pkmID in INDIVIDUAL[0]:
-                self.pkGIFList.append("./pkm_data/sprites/pokeball_loading.gif")
+        self.pkGIFList = []
+        if(name == "MAPA COMPLETO" or name == "LIGA POKÉMON"):
+            previous_routes_key = "ALTO_MANDO_LANCE"
+        else:
+            previous_routes_key = name.replace(" ", "_")
+        for i in range(0, len(individual[0])):
+            if PREVIOUS_ROUTES_TO_TRAINER[previous_routes_key] <= i:
+                self.pkGIFList.append("./pkm_data/manual_sprites/not_captured_yet.gif")
+            elif individual[0][i] is None:
+                self.pkGIFList.append("./pkm_data/manual_sprites/not_captured.gif")
+            else:
+                gif_path = dataset["pkdex"][str(individual[0][i])]["sprite"]["front"]
+                self.pkGIFList.append(gif_path)
+        
 
-            self.map_panel.update_MapPanel(self.pkGIFList)
+        self.map_panel.update_MapPanel(self.pkGIFList)
+
 
     def select_sub_button(self, button, menu_type, force_select=False):
         """Selecciona un botón del submenú"""
@@ -415,13 +477,16 @@ class App(QWidget):
 
         self.pkGIFList = []
         for pkmID in INDIVIDUAL[0]:
-            self.pkGIFList.append("./pkm_data/sprites/pokeball_loading.gif")
+            self.pkGIFList.append("./pkm_data/manual_sprites/not_captured.gif")
 
         self.map_panel.update_MapPanel(self.pkGIFList)
 
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
-    window = App(INDIVIDUAL)
+    (feasibility, fitness_value, entire_logs) = calculate_fitness(INDIVIDUAL, dataset=dataset, verbose=False)
+    window = App(INDIVIDUAL, feasibility, fitness_value, entire_logs)
+    print("FITNESS VALUE")
+    print(fitness_value)
     window.show()
     sys.exit(app.exec_())
