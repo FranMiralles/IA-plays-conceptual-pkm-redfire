@@ -23,7 +23,7 @@ def assign_unique_pokemon(routes, order, all_none=False):
 
     return assignment
 
-result = assign_unique_pokemon(ROUTES, ROUTES_ORDER, all_none=True)
+result = assign_unique_pokemon(ROUTES, ROUTES_ORDER, all_none=False)
 print(result)
 
 INDIVIDUAL = [

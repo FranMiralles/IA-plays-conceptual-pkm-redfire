@@ -135,6 +135,8 @@ def simulate_battle(team: list, rival_team: list, available_mt: list, available_
     start = time.perf_counter()
     level_cap = select_level_cap(rival_team)
 
+    logs = []
+
     # Evolve team
     team_evolved = []
     for pkmID in team:
@@ -159,9 +161,7 @@ def simulate_battle(team: list, rival_team: list, available_mt: list, available_
     while damage_team < totalHP_team and damage_rival_team < totalHP_rival_team :
         # New turn
         turn += 1
-        if verbose:
-            print("TURNO", turn)
-            print("**********************")
+        logs.append("TURNO " + str(turn))
         
         # Select the active pkm and the rival one
         activePkmID = team[damage_team // 100]
@@ -185,9 +185,8 @@ def simulate_battle(team: list, rival_team: list, available_mt: list, available_
         rival_selected_pos = damage_rival_team // 100
         active_rival_HP = 100 - (damage_rival_team % 100)
         
-        if verbose:
-            print(activePkm["species"], "HP", active_HP)
-            print(rival_team[rival_selected_pos]["species"], "HP", active_rival_HP)
+        logs.append(activePkm["species"] + " HP " + str(active_HP))
+        logs.append(rival_team[rival_selected_pos]["species"] + " HP " + str(active_rival_HP))
         
         # Choose which move selects each pkm
         activePkm_attack = select_best_attack(activePkm, rival_team[rival_selected_pos])
@@ -211,8 +210,7 @@ def simulate_battle(team: list, rival_team: list, available_mt: list, available_
         # Perform first move and reduce hp
         if player_first:
             # Player attacks first
-            if verbose:
-                print(activePkm["species"], "attacks with", activePkm_attack)
+            logs.append(activePkm["species"] + " attacks with " + str(activePkm_attack))
             if active_rival_HP <= player_damage:
                 real_damage = active_rival_HP
                 damage_rival_team += active_rival_HP
@@ -242,8 +240,7 @@ def simulate_battle(team: list, rival_team: list, available_mt: list, available_
                     verbose=verbose
                 )
                 # Rival attacks back
-                if verbose:
-                    print(rival_team[rival_selected_pos]["species"], "attacks with", activePkm_rival_attack)
+                logs.append(rival_team[rival_selected_pos]["species"] + " attacks with " + str(activePkm_rival_attack))
                 if active_HP <= rival_damage:
                     real_damage = active_HP
                     damage_team += active_HP
@@ -274,8 +271,7 @@ def simulate_battle(team: list, rival_team: list, available_mt: list, available_
                     )
         else:
             # Rival attacks first
-            if verbose:
-                print(rival_team[rival_selected_pos]["species"], "attacks with", activePkm_rival_attack)
+            logs.append(rival_team[rival_selected_pos]["species"] + " attacks with " + str(activePkm_rival_attack))
             if active_HP <= rival_damage:
                 real_damage = active_HP
                 damage_team += active_HP
@@ -305,8 +301,7 @@ def simulate_battle(team: list, rival_team: list, available_mt: list, available_
                     verbose=verbose
                 )
                 # Player attacks back
-                if verbose:
-                    print(activePkm["species"], "attacks with", activePkm_attack)
+                logs.append(activePkm["species"] + " attacks with " + str(activePkm_attack))
                 if active_rival_HP <= player_damage:
                     real_damage = active_rival_HP
                     damage_rival_team += active_rival_HP
@@ -336,28 +331,33 @@ def simulate_battle(team: list, rival_team: list, available_mt: list, available_
                         verbose=verbose
                     )
 
-        if verbose:
-            print(activePkm["species"], "HP", active_HP)
-            print(rival_team[rival_selected_pos]["species"], "HP", active_rival_HP)
+        logs.append(activePkm["species"] + " HP " + str(active_HP))
+        logs.append(rival_team[rival_selected_pos]["species"] + " HP " + str(active_rival_HP))
 
     end = time.perf_counter()
     elapsed_seconds = end - start
-    if verbose:
-        print(f"Tiempo total: {elapsed_seconds:.6f} s")
+    logs.append(f"Tiempo total: {elapsed_seconds:.6f} s")
     
     player_wins = (damage_team < totalHP_team)
+
+    if verbose:
+        for log in logs:
+            print(log)
     return (player_wins, damage_team)
 
-def calculate_fitness(individual:list, dataset):
+def calculate_fitness(individual:list, dataset, verbose: bool):
     '''
         individual: list
             - first element: list of int that reference pkmID of catched
     '''
     pkm_catched = individual[0]
     fitness_value = 0
+    feasibility = True
+
 
     for i in range(0, len(pkm_catched)):
         print(ROUTES_ORDER[i], ": ", pkm_catched[i])
+    
     start = time.perf_counter()
 
     teams = individual[1]
@@ -366,16 +366,17 @@ def calculate_fitness(individual:list, dataset):
         # Comprobar que el equipo utilizado ha sido atrapado, sino penalizar con + INF y dejar de calcular
         for pkm in teams[i]:
             if(pkm not in pkm_catched_previously):
-                return float('inf')
+                return (False, float('inf'))
         simulation = simulate_battle(
                 team=teams[i], 
                 rival_team=TRAINERS[TRAINERS_ORDER[i]], 
                 available_mt=AVAILABLE_MT_TRAINERS[TRAINERS_ORDER[i]],
                 available_ev_obj=AVAILABLE_EVOLVE_OBJ_TRAINERS[TRAINERS_ORDER[i]], 
                 dataset=dataset, 
-                verbose=True
+                verbose=verbose
             )
         if(not simulation[0]):
+            feasibility = False
             fitness_value += 10000
         else:
             fitness_value += simulation[1]
@@ -386,7 +387,7 @@ def calculate_fitness(individual:list, dataset):
     elapsed_seconds = end - start
     print(elapsed_seconds)
 
-    return fitness_value
+    return (feasibility, fitness_value)
 
 
 dataset = load_json_in_dataset()
@@ -397,8 +398,8 @@ dataset = load_json_in_dataset()
 # print(passed)
 # print(damage_lost)
 
-'''
-fitness_value = calculate_fitness(
+
+feasibility, fitness_value = calculate_fitness(
     individual=[
         [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36],
         [
@@ -417,8 +418,7 @@ fitness_value = calculate_fitness(
             [1, 2, 3, 2, 3, 6],
             [1, 2, 3, 2, 3, 29],
         ]
-    ], dataset=dataset)
+    ], dataset=dataset, verbose= True)
 
 print(fitness_value)
-
-'''
+print(feasibility)

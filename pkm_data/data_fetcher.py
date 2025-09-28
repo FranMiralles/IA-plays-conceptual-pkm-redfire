@@ -3,6 +3,7 @@ import requests
 import json
 import os
 import time
+from PIL import Image, ImageSequence
 
 def guardar_json(datos, nombre_archivo):
     try:
@@ -197,17 +198,72 @@ def save_sprites():
             # Pequeña pausa para no saturar la API
             time.sleep(0.2)
 
+    
+
+def normalize_sprites():
+    input_folder = "./pkm_data/sprites"
+    output_folder = "./pkm_data/normalized_sprites"
+    os.makedirs(output_folder, exist_ok=True)
+
+    # Max dimensions
+    max_width, max_height = 0, 0
+    for file in os.listdir(input_folder):
+        if file.lower().endswith(".gif") and not file.lower().endswith("pokeball_loading.gif"):
+            with Image.open(os.path.join(input_folder, file)) as img:
+                w, h = img.size
+                if w > max_width:
+                    max_width = w
+                if h > max_height:
+                    max_height = h
+
+    print(f"Tamaño máximo encontrado: {max_width}x{max_height}")
+
+    # Processing and redimension
+    for file in os.listdir(input_folder):
+        if file.lower().endswith(".gif") and not file.lower().endswith("pokeball_loading.gif"):
+            path = os.path.join(input_folder, file)
+            with Image.open(path) as img:
+                frames = []
+                for frame in ImageSequence.Iterator(img):
+                    frame = frame.convert("RGBA")  # Asegurar compatibilidad
+
+                    # Crear lienzo vacío con el tamaño máximo
+                    new_frame = Image.new("RGBA", (max_width, max_height), (0, 0, 0, 0))
+
+                    # Calcular posición
+                    x_offset = (max_width - frame.width) // 2
+                    y_offset = max_height - frame.height
+
+                    # Pegar el frame en la posición calculada
+                    new_frame.paste(frame, (x_offset, y_offset), frame)
+
+                    frames.append(new_frame)
+
+                # Guardar nuevo gif
+                output_path = os.path.join(output_folder, file)
+                frames[0].save(
+                    output_path,
+                    save_all=True,
+                    append_images=frames[1:],
+                    duration=img.info.get("duration", 100),
+                    loop=img.info.get("loop", 0),
+                    disposal=2,
+                    transparency=0,
+                )
+                print(f"Procesado: {file}")
+
 while True:
     print("Script para obtener datos de la POKE API")
     print("Qué datos quieres guardar?")
     print("1. Pokédex 1-151 pokémon")
     print("2. Sprites animados")
-    print("3. Movimientos")
-    print("4. Evoluciones")
-    print("5. Exit")
+    print("3. Normalizar sprites")
+    print("4. Movimientos")
+    print("5. Evoluciones")
+    print("6. Exit")
 
     option = input("Selecciona una opción: ")
-    if option != "1" and option != "2" and option != "3" and option != "4" and option != "5":
+    if option != "1" and option != "2" and option != "3" and option != "4" and option != "5" and option != "6":
         print("Opción no válida")
         exit()
 
@@ -218,9 +274,11 @@ while True:
     elif option == 2:
         save_sprites()
     elif option == 3:
-        save_moves()
+        normalize_sprites()
     elif option == 4:
-        save_evolutions()
+        save_moves()
     elif option == 5:
+        save_evolutions()
+    elif option == 6:
         print("Saliendo del menú")
         exit()
