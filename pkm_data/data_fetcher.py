@@ -62,7 +62,13 @@ def save_pokedex():
             for move in result["moves"]:
                 for detail in move["version_group_details"]:
                     if detail["version_group"]["name"] == "firered-leafgreen" and (detail["move_learn_method"]["name"] == "level-up" or detail["move_learn_method"]["name"] == "machine") and move["move"]["name"] in moves:
-                        pkm["moves"][move["move"]["name"]] = {
+
+                        # Correct new names to previous versions
+                        move_name = move["move"]["name"]
+                        if move_name == "vice-grip":
+                            move_name = "vise-grip"
+
+                        pkm["moves"][move_name] = {
                             "level": detail["level_learned_at"],
                             "method": detail["move_learn_method"]["name"]
 

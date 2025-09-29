@@ -59,6 +59,7 @@ def deal_damage(attacker:object, defender:object, move:str):
         "defender": defender,
         "move": move
     }
+    print(move)
     res = requests.post("http://localhost:3000/calc", json=data)
     maxHP = res.json()["defender"]["rawStats"]["hp"]
     if(type(res.json()["damage"]) == type(1)):
@@ -66,6 +67,8 @@ def deal_damage(attacker:object, defender:object, move:str):
     else:
         lostHP = round(statistics.median(res.json()["damage"]) / maxHP, 2)
     return lostHP
+
+deal_damage(attacker = {'species': 'Krabby', 'ability': 'hyper-cutter', 'level': 43}, defender={'species': 'Weezing', 'level': 43, 'ability': 'levitate', 'moves': ['sludge', 'tackle'], 'speed': 69}, move="vise-grip")
 
 def select_best_attack(attacker:object, target:object):
     '''
@@ -79,7 +82,7 @@ def select_best_attack(attacker:object, target:object):
                     - ability: str
                     - level: int
     '''
-    best_move = ("", 0)
+    best_move = ("", float('-inf'))
     for move in attacker["moves"]:
         lostHP = deal_damage(
             {
@@ -137,16 +140,24 @@ def simulate_battle(team: list, rival_team: list, available_mt: list, available_
     logs = []
 
     # Evolve team
+    '''
     team_evolved = []
     for pkmID in team:
         pkmID = str(pkmID)
         while pkmID in dataset["evolutions"]:
-            if (dataset["evolutions"][pkmID][1] == 'level-up' and dataset["evolutions"][pkmID][2] <= level_cap) or (dataset["evolutions"][pkmID][1] == "use-item" and dataset["evolutions"][pkmID][2] in available_ev_obj):
+            if ((
+                    dataset["evolutions"][pkmID][1] == 'level-up' and dataset["evolutions"][pkmID][2] <= level_cap
+                ) or (
+                    dataset["evolutions"][pkmID][1] == "use-item" and dataset["evolutions"][pkmID][2] in available_ev_obj
+                )) and (
+                    dataset["evolutions"][pkmID][0] <= 151
+                ):
                 pkmID = str(dataset["evolutions"][pkmID][0])
             else:
                 break
         team_evolved.append(int(pkmID))
     team = team_evolved
+    '''
 
     totalHP_team = len(team) * 100
     totalHP_rival_team = len(rival_team) * 100
@@ -191,6 +202,12 @@ def simulate_battle(team: list, rival_team: list, available_mt: list, available_
         activePkm_attack = select_best_attack(activePkm, rival_team[rival_selected_pos])
         activePkm_rival_attack = select_best_attack(rival_team[rival_selected_pos], activePkm)
 
+        print("ACTIVE_PKM_ATTACK")
+        print(activePkm)
+        print(activePkm_attack[0])
+        print("ACTIVE_PKM_RIVAL_ATTACK")
+        print(rival_team[rival_selected_pos])
+        print(activePkm_rival_attack[0])
         player_first = False
         # Which of the moves performs first
         if dataset["moves"][activePkm_attack[0]] > dataset["moves"][activePkm_rival_attack[0]]:

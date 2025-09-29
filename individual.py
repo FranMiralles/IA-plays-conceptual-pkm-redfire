@@ -1,47 +1,55 @@
 from route_data.routes import ROUTES, ROUTES_ORDER
+from route_data.trainers import TRAINERS, TRAINERS_ORDER, PREVIOUS_ROUTES_TO_TRAINER
 import random
+from battle_simulator import *
 
+def generate_individual(routes, order):
+    '''
+    Generates a random individual that uses pkms catched on the run
+    '''
 
-def assign_unique_pokemon(routes, order, all_none=False):
-    used = set()           # para no repetir pokémon
-    assignment = []        # resultado final
+    used = set()        # Not to repeat pkm
+    catches = []        # Catches in routes
 
     for route in order:
         options = routes.get(route, [])
-        # Filtrar los que aún no se han usado
+        # Filter available pkm to catch in each route
         available = [pkm for pkm in options if pkm not in used]
-        if all_none:
-            available = []
 
         if available:
-            chosen = random.choice(available)  # elegir aleatoriamente
+            chosen = random.choice(available)  # Choose randomly
             used.add(chosen)
         else:
-            chosen = None  # no queda ninguno disponible
+            chosen = None
 
-        assignment.append(chosen)
+        catches.append(chosen)
 
-    return assignment
+    # Generate 14 teams from catches
+    teams = []
+    for i in range(0, 14):
+        available =  [pkmID for pkmID in catches[:PREVIOUS_ROUTES_TO_TRAINER[TRAINERS_ORDER[i]]] if pkmID is not None]
+        teams.append(random.sample(available, min(6, len(available))))
 
-result = assign_unique_pokemon(ROUTES, ROUTES_ORDER, all_none=False)
-print(result)
+    return [
+        catches,
+        teams
+    ]
 
-INDIVIDUAL = [
-        result,
-        [
-            [1, 1, 1, 1, 1],
-            [1, 1, 1, 1, 1],
-            [1, 1, 1, 1, 1],
-            [1, 1, 1, 1, 1],
-            [1, 1, 1, 1, 1],
-            [1, 1, 1, 1, 1],
-            [1, 1, 1, 1, 1],
-            [1, 1, 1, 1, 1],
-            [1, 1, 1, 1, 1],
-            [1, 1, 1, 1, 1],
-            [1, 1, 1, 1, 1],
-            [1, 1, 1, 1, 1],
-            [1, 1, 1, 1, 1],
-            [1, 1, 1, 1, 1],
-        ]
-]
+INDIVIDUAL_EXAMPLE = generate_individual(ROUTES, ROUTES_ORDER)
+print(INDIVIDUAL_EXAMPLE)
+
+
+
+for i in range(0, 1000):
+    start = time.perf_counter()
+    print(i)
+    calculate_fitness(
+        individual=generate_individual(ROUTES, ROUTES_ORDER),
+        dataset=dataset,
+        verbose=False
+    )
+
+    end = time.perf_counter()
+    elapsed_seconds = end - start
+    print("TIME OF GENERATE 1000 individuals and calculate its fitness")
+    print(elapsed_seconds)

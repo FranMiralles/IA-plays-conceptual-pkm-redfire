@@ -7,7 +7,7 @@ import requests
 from io import BytesIO
 from tempfile import NamedTemporaryFile
 from battle_simulator import *
-from individual import INDIVIDUAL
+from individual import INDIVIDUAL_EXAMPLE
 from route_data.trainers import PREVIOUS_ROUTES_TO_TRAINER, TRAINERS_ORDER
 
 STYLE_SHEET = """
@@ -515,7 +515,7 @@ class App(QWidget):
 
 
         self.pkGIFList = []
-        for pkmID in INDIVIDUAL[0]:
+        for pkmID in INDIVIDUAL_EXAMPLE[0]:
             self.pkGIFList.append("./pkm_data/manual_sprites/not_captured.gif")
 
         self.map_panel.update_MapPanel(self.pkGIFList)
@@ -523,8 +523,8 @@ class App(QWidget):
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
-    (feasibility, fitness_value, entire_logs) = calculate_fitness(INDIVIDUAL, dataset=dataset, verbose=False)
-    window = App(INDIVIDUAL, feasibility, fitness_value, entire_logs)
+    (feasibility, fitness_value, entire_logs) = calculate_fitness(INDIVIDUAL_EXAMPLE, dataset=dataset, verbose=False)
+    window = App(INDIVIDUAL_EXAMPLE, feasibility, fitness_value, entire_logs)
     print("FITNESS VALUE")
     print(fitness_value)
     window.show()
