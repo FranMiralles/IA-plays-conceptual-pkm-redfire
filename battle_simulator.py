@@ -60,7 +60,6 @@ def deal_damage(attacker:object, defender:object, move:str):
         "defender": defender,
         "move": move
     }
-    print(move)
     res = session.post("http://localhost:3000/calc", json=data)
     maxHP = res.json()["defender"]["rawStats"]["hp"]
     if(type(res.json()["damage"]) == type(1)):
@@ -203,12 +202,6 @@ def simulate_battle(team: list, rival_team: list, available_mt: list, available_
         activePkm_attack = select_best_attack(activePkm, rival_team[rival_selected_pos])
         activePkm_rival_attack = select_best_attack(rival_team[rival_selected_pos], activePkm)
 
-        print("ACTIVE_PKM_ATTACK")
-        print(activePkm)
-        print(activePkm_attack[0])
-        print("ACTIVE_PKM_RIVAL_ATTACK")
-        print(rival_team[rival_selected_pos])
-        print(activePkm_rival_attack[0])
         player_first = False
         # Which of the moves performs first
         if dataset["moves"][activePkm_attack[0]] > dataset["moves"][activePkm_rival_attack[0]]:
@@ -402,30 +395,3 @@ def calculate_fitness(individual:list, dataset, verbose: bool):
 
 
 dataset = load_json_in_dataset()
-
-
-'''
-feasibility, fitness_value = calculate_fitness(
-    individual=[
-        [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36],
-        [
-            [1, 2, 3, 1, 2],
-            [1, 2, 3, 2, 2, 6],
-            [1, 2, 3, 2, 3, 6],
-            [1, 2, 3, 3, 3, 6],
-            [1, 2, 3, 2, 3, 6],
-            [1, 2, 3, 2, 3, 6],
-            [1, 2, 3, 2, 3, 6],
-            [1, 2, 3, 2, 3, 6],
-            [1, 2, 3, 2, 3, 6],
-            [1, 2, 3, 2, 3, 6],
-            [1, 2, 3, 2, 3, 6],
-            [1, 2, 3, 2, 3, 6],
-            [1, 2, 3, 2, 3, 6],
-            [1, 2, 3, 2, 3, 29],
-        ]
-    ], dataset=dataset, verbose= True)
-
-print(fitness_value)
-print(feasibility)
-'''

@@ -443,33 +443,3 @@ PREVIOUS_ROUTES_TO_TRAINER = {
 }
 
 
-
-'''
-import tkinter as tk
-from PIL import Image, ImageTk, ImageSequence
-import requests
-from io import BytesIO
-
-# Descargar el GIF desde la URL
-url = "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/versions/generation-v/black-white/animated/1.gif"
-resp = requests.get(url)
-gif = Image.open(BytesIO(resp.content))
-
-# Crear ventana
-root = tk.Tk()
-root.title("GIF animado desde URL (Bulbasaur)")
-
-# Convertir frames
-frames = [ImageTk.PhotoImage(f.copy()) for f in ImageSequence.Iterator(gif)]
-
-label = tk.Label(root)
-label.pack()
-
-def animar(i=0):
-    frame = frames[i]
-    label.config(image=frame)
-    root.after(100, animar, (i+1) % len(frames))  # 100 ms entre frames
-
-animar()
-root.mainloop()
-'''

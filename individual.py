@@ -3,7 +3,7 @@ from route_data.trainers import TRAINERS, TRAINERS_ORDER, PREVIOUS_ROUTES_TO_TRA
 import random
 from battle_simulator import *
 
-def generate_individual(routes, order):
+def generate_individual():
     '''
     Generates a random individual that uses pkms catched on the run
     '''
@@ -11,8 +11,8 @@ def generate_individual(routes, order):
     used = set()        # Not to repeat pkm
     catches = []        # Catches in routes
 
-    for route in order:
-        options = routes.get(route, [])
+    for route in ROUTES_ORDER:
+        options = ROUTES.get(route, [])
         # Filter available pkm to catch in each route
         available = [pkm for pkm in options if pkm not in used]
 
@@ -35,21 +35,5 @@ def generate_individual(routes, order):
         teams
     ]
 
-INDIVIDUAL_EXAMPLE = generate_individual(ROUTES, ROUTES_ORDER)
+INDIVIDUAL_EXAMPLE = generate_individual()
 print(INDIVIDUAL_EXAMPLE)
-
-
-
-for i in range(0, 1000):
-    start = time.perf_counter()
-    print(i)
-    calculate_fitness(
-        individual=generate_individual(ROUTES, ROUTES_ORDER),
-        dataset=dataset,
-        verbose=False
-    )
-
-    end = time.perf_counter()
-    elapsed_seconds = end - start
-    print("TIME OF GENERATE 1000 individuals and calculate its fitness")
-    print(elapsed_seconds)
