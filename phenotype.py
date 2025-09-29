@@ -321,14 +321,32 @@ class App(QWidget):
         self.main_menu.addWidget(self.btn_map)
         self.main_menu.addWidget(self.btn_combat)
 
+        # Empujar al final
+        self.main_menu.addStretch(1)
+
+        # Labels al fondo de valores del individuo
+        if feasibility:
+            label1 = QLabel("Factible")
+        else:
+            label1 = QLabel(f"No Factible")
+        label2 = QLabel("Valor Fitness: " + str(fitness_value))
+
+        label1.setFont(QFont("Arial", 12))
+        label1.setStyleSheet("color: white; font-weight: bold;")
+        label2.setFont(QFont("Arial", 12))
+        label2.setStyleSheet("color: white; font-weight: bold;")
+
+        self.main_menu.addWidget(label1)
+        self.main_menu.addWidget(label2)
+
         main_menu_widget = QWidget()
         main_menu_widget.setLayout(self.main_menu)
         main_menu_widget.setObjectName("main_menu")
-        main_menu_widget.setFixedWidth(180)
+        main_menu_widget.setFixedWidth(190)
 
         # ===== SUBMENÚ (dinámico con QStackedWidget) =====
         self.submenu_stack = QStackedWidget()
-        self.submenu_stack.setFixedWidth(180)
+        self.submenu_stack.setFixedWidth(190)
 
         # Diccionario para almacenar botones de submenú
         self.submenu_buttons = {"mapa": [], "combates": []}
