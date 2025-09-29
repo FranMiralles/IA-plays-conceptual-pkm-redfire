@@ -129,17 +129,22 @@ ROUTE_NAMES = [
     "PUEBLO PALETA", "RUTA 1", "RUTA 22", "RUTA 2", "BOSQUE VERDE",
     "RUTA 3", "RUTA 4", "MONTE MOON", "RUTA 24", "RUTA 25",
     "RUTA 5", "RUTA 6", "RUTA 11", "CUEVA DIGLETT", "RUTA 9",
-    "RUTA 10", "TUNEL ROCA", "RUTA 8", "RUTA 7", "RUTA 16",
-    "TORRE POKEMON", "RUTA 12", "RUTA 13", "RUTA 14", "RUTA 15",
+    "RUTA 10", "TÚNEL ROCA", "RUTA 8", "RUTA 7", "RUTA 16",
+    "TORRE POKÉMON", "RUTA 12", "RUTA 13", "RUTA 14", "RUTA 15",
     "ZONA SAFARI", "RUTA 18", "RUTA 17", "RUTA 19", "RUTA 20",
-    "RUTA 21", "ISLAS ESPUMA", "MANSION PKM", "CENTRAL ENERGIA",
+    "RUTA 21", "ISLAS ESPUMA", "MANSIÓN POKÉMON", "CENTRAL ENERGÍA",
     "RUTA 23", "CALLE VICTORIA"
 ]
 
 def select_direction(route_name: str):
-    if route_name in ["PUEBLO PALETA", "RUTA 1", "RUTA 21", "MANSION PKM", "RUTA 5", "RUTA 6", "RUTA 14"]:
+    if route_name in ["PUEBLO PALETA", "RUTA 1", "RUTA 21", "MANSIÓN POKÉMON", "RUTA 5", "RUTA 6", "RUTA 22", "RUTA 23", "CALLE VICTORIA"]:
         return "left"
-        pass
+    if route_name in ["TÚNEL ROCA", "CENTRAL ENERGÍA", "RUTA 10", "TORRE POKÉMON", "RUTA 12", "RUTA 2", "BOSQUE VERDE"]:
+        return "right"
+    if route_name in ["ISLAS ESPUMA", "RUTA 20", "RUTA 19", "RUTA 17", "RUTA 16", "RUTA 7", "CUEVA DIGLETT", "RUTA 11", "RUTA 8", "RUTA 14", "RUTA 9", "RUTA 13"]:
+        return "down"
+    if route_name in ["RUTA 18", "RUTA 24", "RUTA 18", "RUTA 25", "TÚNEL ROCA", "RUTA 4", "RUTA 3", "MONTE MOON", "RUTA 15", "ZONA SAFARI"]:
+        return "up"
 
 class MapPanel(QWidget):
     def __init__(self, pkGIFList: list, feasibility: bool):
@@ -168,9 +173,9 @@ class MapPanel(QWidget):
 
             if pkGIF in ["./pkm_data/manual_sprites/not_captured.gif",
                         "./pkm_data/manual_sprites/not_captured_yet.gif"]:
-                self.route_widgets.append((gif_label, movie, "ball", name_label))
+                self.route_widgets.append((gif_label, movie, "ball", name_label, name_label_direction))
             else:
-                self.route_widgets.append((gif_label, movie, "pkm", name_label))
+                self.route_widgets.append((gif_label, movie, "pkm", name_label, name_label_direction))
 
         # --- Texto ---
         if feasibility:
@@ -193,16 +198,30 @@ class MapPanel(QWidget):
         #widget_size_ball = int(w * 0.1 * reducer_gif), int(h * 0.15 * reducer_gif)
         widget_size_pkm = int(w * 0.1 * increment_gif), int(h * 0.15 * increment_gif)
 
-        for i, (widget, movie, type, name_label) in enumerate(self.route_widgets):
+        for i, (widget, movie, type, name_label, name_label_direction) in enumerate(self.route_widgets):
             if type == "pkm":
                 x = int(w * PK_POSITIONS[i][0])
                 y = int(h * PK_POSITIONS[i][1])
-                name_label.move(int(x - name_label.width() + w * 0.02), int(y - name_label.height() + h * 0.15))
+                if name_label_direction == "left":
+                    name_label.move(int(x - name_label.width() + w * 0.02), int(y - name_label.height() + h * 0.15))
+                if name_label_direction == "right":
+                    name_label.move(int(x + w * 0.078), int(y - name_label.height() + h * 0.15))
+                if name_label_direction == "down":
+                    name_label.move(int(x + w * 0.025), int(y - name_label.height() + h * 0.18))
+                if name_label_direction == "up":
+                    name_label.move(int(x + w * 0.025), int(y - name_label.height() + h * 0.08))
             else:
                 x = int(w * PK_POSITIONS[i][0])
                 y = int(h * (PK_POSITIONS[i][1] + 0.05))
-                name_label.move(int(x - name_label.width() + w * 0.02), int(y - name_label.height() + h * 0.1))
-
+                if name_label_direction == "left":
+                    name_label.move(int(x - name_label.width() + w * 0.02), int(y - name_label.height() + h * 0.1))
+                if name_label_direction == "right":
+                    name_label.move(int(x + w * 0.078), int(y - name_label.height() + h * 0.1))
+                if name_label_direction == "down":
+                    name_label.move(int(x + w * 0.025), int(y - name_label.height() + h * 0.13))
+                if name_label_direction == "up":
+                    name_label.move(int(x + w * 0.025), int(y - name_label.height() + h * 0.03))
+            
             widget.resize(*widget_size_pkm)
             widget.move(x, y)
             movie.setScaledSize(widget.size())
@@ -210,7 +229,7 @@ class MapPanel(QWidget):
             # Label a la izquierda del GIF
             #name_label.move(x - name_label.width(), y + widget.height()//2 - name_label.height()//2)
             
-            font_size = max(int(h * 0.02), 7)
+            font_size = max(int(h * 0.02), 1)
             name_label.setFont(QFont("Arial", font_size))
             name_label.adjustSize()
 
@@ -223,7 +242,7 @@ class MapPanel(QWidget):
     def update_MapPanel(self, pkGIFList: list):
         """Actualiza la lista de sprites mostrados en el mapa"""
         # Eliminar los widgets anteriores
-        for widget, movie, type, name_label in self.route_widgets:
+        for widget, movie, type, name_label, name_label_direction in self.route_widgets:
             widget.setParent(None)
             movie.stop()
             name_label.setParent(None)
@@ -243,11 +262,13 @@ class MapPanel(QWidget):
             name_label.adjustSize()
             name_label.show()
 
+            name_label_direction = select_direction(ROUTE_NAMES[i])
+
             if pkGIF in ["./pkm_data/manual_sprites/not_captured.gif",
                         "./pkm_data/manual_sprites/not_captured_yet.gif"]:
-                self.route_widgets.append((gif_label, movie, "ball", name_label))
+                self.route_widgets.append((gif_label, movie, "ball", name_label, name_label_direction))
             else:
-                self.route_widgets.append((gif_label, movie, "pkm", name_label))
+                self.route_widgets.append((gif_label, movie, "pkm", name_label, name_label_direction))
 
         # Forzar redibujo y reposicionamiento
         self.update()
