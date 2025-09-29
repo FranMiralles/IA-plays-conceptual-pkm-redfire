@@ -10,7 +10,8 @@ import math
 
 # In this version, in pkm battles the individuals only choose the team used in a gym. Attacks used are selected among the possible ones maximizing damage dealt to the rival's pkm. Also, current pkm cannot switch so the current pkm steals being the current one until the battle finishes or the pkm is dead.
 
-# 
+# A Session to conect via TCP to server
+session = requests.Session()
 
 def load_json_in_dataset():
     def cargar_json(nombre_archivo):
@@ -60,7 +61,7 @@ def deal_damage(attacker:object, defender:object, move:str):
         "move": move
     }
     print(move)
-    res = requests.post("http://localhost:3000/calc", json=data)
+    res = session.post("http://localhost:3000/calc", json=data)
     maxHP = res.json()["defender"]["rawStats"]["hp"]
     if(type(res.json()["damage"]) == type(1)):
         lostHP = round(res.json()["damage"] / maxHP, 2)
