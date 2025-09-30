@@ -62,23 +62,15 @@ def mutate_individual_hard_feasibility(individual: list, prob_mutate_catches=0.2
                 catches[i] = chosen
             
             # Due to have changed the catches, is necessary to cure the teams posterior from i
-            print("POSITION IN CATCHES", i)
-            print("PREVIOUS", previous_value)
-            print("CURRENT", catches[i])
+            
             teams_envolved = [trainer for trainer, quantityPkm in PREVIOUS_ROUTES_TO_TRAINER.items() if quantityPkm > i]
-            teams_not_envolved = [trainer for trainer, quantityPkm in PREVIOUS_ROUTES_TO_TRAINER.items() if quantityPkm <= i]
-            print("TEAMS ENVOLVED IN THIS CHANGE")
-            print(teams_envolved)
+           
             teams = individual[1]
-            #print(len(teams_envolved))
             for t in range(len(teams) - len(teams_envolved), len(teams)):
                 teams[t] = [catches[i] if x == previous_value else x for x in teams[t]]
                 teams[t] = [x for x in teams[t] if x is not None]
-                available = catches[0:PREVIOUS_ROUTES_TO_TRAINER[teams_not_envolved[len(teams_not_envolved)-1]]]
-                print(teams[t])
-                print(available)
             
-            
+            # Después de una pasada lo que se puede hacer es ajustar si la len de los equipos no es 6 añadir de los availables
             
             for t in range(len(individual[1])):
                 individual[1][t] = [catches[i] if pkmID == previous_value else pkmID 
