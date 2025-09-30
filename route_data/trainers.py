@@ -443,3 +443,7 @@ PREVIOUS_ROUTES_TO_TRAINER = {
 }
 
 
+TOTAL_RIVAL_PKM = 0
+
+for trainerKey, trainerValue in TRAINERS.items():
+    TOTAL_RIVAL_PKM += len(trainerValue)

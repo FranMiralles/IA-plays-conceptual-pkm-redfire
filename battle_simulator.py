@@ -1,12 +1,13 @@
 import requests
 import statistics
 import json
-from route_data.trainers import TRAINERS, TRAINERS_ORDER, PREVIOUS_ROUTES_TO_TRAINER
+from route_data.trainers import TOTAL_RIVAL_PKM, TRAINERS, TRAINERS_ORDER, PREVIOUS_ROUTES_TO_TRAINER
 from route_data.routes import ROUTES_ORDER
 from route_data.mt_moves import AVAILABLE_MT_TRAINERS
 from route_data.evolve_obj import AVAILABLE_EVOLVE_OBJ_TRAINERS
 import time
 import math
+import random
 
 # In this version, in pkm battles the individuals only choose the team used in a gym. Attacks used are selected among the possible ones maximizing damage dealt to the rival's pkm. Also, current pkm cannot switch so the current pkm steals being the current one until the battle finishes or the pkm is dead.
 
@@ -111,7 +112,7 @@ def select_level_cap(rival_team:object):
             max_level = pkm["level"]
     return max_level
 
-def cure_with_drain_move(attacker_name, attack, real_damage, hp, total_damage, drain_attacks, verbose=False):
+def cure_with_drain_move(attacker_name, attack, real_damage, hp, total_damage, drain_attacks, logs, verbose=False):
     move_name = attack[0]
     if move_name in drain_attacks and real_damage > 0:
         heal = real_damage // 2
@@ -119,7 +120,9 @@ def cure_with_drain_move(attacker_name, attack, real_damage, hp, total_damage, d
         hp += recovered
         total_damage -= recovered
         if verbose and recovered > 0:
-            print(f"{attacker_name} recovers {recovered} HP with {move_name}")
+            log_message = f"{attacker_name} recovers {recovered} HP with {move_name}"
+            print(log_message)
+            logs.append(log_message)
     return hp, total_damage
 
 def simulate_battle(team: list, rival_team: list, available_mt: list, available_ev_obj: list,dataset: object, verbose:bool):
@@ -140,7 +143,7 @@ def simulate_battle(team: list, rival_team: list, available_mt: list, available_
     logs = []
 
     # Evolve team
-    '''
+    
     team_evolved = []
     for pkmID in team:
         pkmID = str(pkmID)
@@ -157,7 +160,7 @@ def simulate_battle(team: list, rival_team: list, available_mt: list, available_
                 break
         team_evolved.append(int(pkmID))
     team = team_evolved
-    '''
+    
 
     totalHP_team = len(team) * 100
     totalHP_rival_team = len(rival_team) * 100
@@ -167,8 +170,12 @@ def simulate_battle(team: list, rival_team: list, available_mt: list, available_
     turn = 0
 
     drain_attacks = ["absorb", "mega-drain", "giga-drain"]
+    explosion_moves = ["explosion", "self-destruct"]
 
-    while damage_team < totalHP_team and damage_rival_team < totalHP_rival_team :
+    player_must_recharge = False
+    rival_must_recharge = False
+
+    while damage_team < totalHP_team and damage_rival_team < totalHP_rival_team:
         # New turn
         turn += 1
         logs.append("TURNO " + str(turn))
@@ -185,9 +192,9 @@ def simulate_battle(team: list, rival_team: list, available_mt: list, available_
                     [move_key 
                         for move_key, move_value in dataset["pkdex"][str(activePkmID)]["moves"].items() 
                             if (
-                                (move_value["level"] <= level_cap and move_value["method"] == "level-up") 
+                                (move_value["level"] <= level_cap and move_value["method"] == "level-up" and move_key not in explosion_moves) 
                                 or 
-                                (move_value["method"] == "machine" and move_key in available_mt)
+                                (move_value["method"] == "machine" and move_key in available_mt and move_key not in explosion_moves)
                                 )
                     ]
         }
@@ -212,16 +219,27 @@ def simulate_battle(team: list, rival_team: list, available_mt: list, available_
             if activePkm["speed"] > rival_team[rival_selected_pos]["speed"]:
                 player_first = True
 
-        player_damage = round(activePkm_attack[1] * 100)
-        rival_damage = round(activePkm_rival_attack[1] * 100)
+        player_damage = round(activePkm_attack[1] * 100) if not player_must_recharge else 0
+        rival_damage = round(activePkm_rival_attack[1] * 100) if not rival_must_recharge else 0
 
-        # Guardar quién atacó en este turno para tenerlo en cuenta en el siguiente
+        player_uses_hyperbeam = True if activePkm_attack[0] == "hyper-beam" and not player_must_recharge else False
+        rival_uses_hyperbeam = True if activePkm_rival_attack[0] == "hyper-beam" and not rival_must_recharge else False
+
+        player_uses_explosion = True if activePkm_attack[0] in explosion_moves and not player_must_recharge else False
+        rival_uses_explosion = True if activePkm_rival_attack[0] in explosion_moves and not rival_must_recharge else False
+        
 
         # Perform first move and reduce hp
         if player_first:
             # Player attacks first
-            logs.append(activePkm["species"] + " attacks with " + str(activePkm_attack))
+            if player_damage == 0:
+                    logs.append(activePkm["species"] + " must recharge!")
+            else:
+                logs.append(activePkm["species"] + " attacks with " + str(activePkm_attack))
+
+            # Normal behaviour
             if active_rival_HP <= player_damage:
+                # Rival death
                 real_damage = active_rival_HP
                 damage_rival_team += active_rival_HP
                 active_rival_HP = 0
@@ -233,8 +251,15 @@ def simulate_battle(team: list, rival_team: list, available_mt: list, available_
                     hp=active_HP,
                     total_damage=damage_team,
                     drain_attacks=drain_attacks,
+                    logs=logs,
                     verbose=verbose
                 )
+
+                if player_uses_hyperbeam:
+                    player_must_recharge = True
+                if rival_uses_hyperbeam:
+                    rival_must_recharge = False
+
             else:
                 real_damage = player_damage
                 damage_rival_team += player_damage
@@ -247,10 +272,15 @@ def simulate_battle(team: list, rival_team: list, available_mt: list, available_
                     hp=active_HP,
                     total_damage=damage_team,
                     drain_attacks=drain_attacks,
+                    logs=logs,
                     verbose=verbose
                 )
+
                 # Rival attacks back
-                logs.append(rival_team[rival_selected_pos]["species"] + " attacks with " + str(activePkm_rival_attack))
+                if rival_damage == 0:
+                    logs.append(rival_team[rival_selected_pos]["species"] + " must recharge!")
+                else:
+                    logs.append(rival_team[rival_selected_pos]["species"] + " attacks with " + str(activePkm_rival_attack))
                 if active_HP <= rival_damage:
                     real_damage = active_HP
                     damage_team += active_HP
@@ -263,8 +293,16 @@ def simulate_battle(team: list, rival_team: list, available_mt: list, available_
                         hp=active_rival_HP,
                         total_damage=damage_rival_team,
                         drain_attacks=drain_attacks,
+                        logs=logs,
                         verbose=verbose
                     )
+
+                    
+                    if player_uses_hyperbeam:
+                        player_must_recharge = False
+                    if rival_uses_hyperbeam:
+                        rival_must_recharge = True
+
                 else:
                     real_damage = rival_damage
                     damage_team += rival_damage
@@ -277,11 +315,21 @@ def simulate_battle(team: list, rival_team: list, available_mt: list, available_
                         hp=active_rival_HP,
                         total_damage=damage_rival_team,
                         drain_attacks=drain_attacks,
+                        logs=logs,
                         verbose=verbose
                     )
+
+                    if player_uses_hyperbeam:
+                        player_must_recharge = True
+                    if rival_uses_hyperbeam:
+                        rival_must_recharge = True
+
         else:
             # Rival attacks first
-            logs.append(rival_team[rival_selected_pos]["species"] + " attacks with " + str(activePkm_rival_attack))
+            if rival_damage == 0:
+                logs.append(rival_team[rival_selected_pos]["species"] + " must recharge!")
+            else:
+                logs.append(rival_team[rival_selected_pos]["species"] + " attacks with " + str(activePkm_rival_attack))
             if active_HP <= rival_damage:
                 real_damage = active_HP
                 damage_team += active_HP
@@ -294,8 +342,15 @@ def simulate_battle(team: list, rival_team: list, available_mt: list, available_
                     hp=active_rival_HP,
                     total_damage=damage_rival_team,
                     drain_attacks=drain_attacks,
+                    logs=logs,
                     verbose=verbose
                 )
+
+                if player_uses_hyperbeam:
+                    player_must_recharge = False
+                if rival_uses_hyperbeam:
+                    rival_must_recharge = True
+
             else:
                 real_damage = rival_damage
                 damage_team += rival_damage
@@ -308,10 +363,14 @@ def simulate_battle(team: list, rival_team: list, available_mt: list, available_
                     hp=active_rival_HP,
                     total_damage=damage_rival_team,
                     drain_attacks=drain_attacks,
+                    logs=logs,
                     verbose=verbose
                 )
                 # Player attacks back
-                logs.append(activePkm["species"] + " attacks with " + str(activePkm_attack))
+                if player_damage == 0:
+                    logs.append(activePkm["species"] + " must recharge!")
+                else:
+                    logs.append(activePkm["species"] + " attacks with " + str(activePkm_attack))
                 if active_rival_HP <= player_damage:
                     real_damage = active_rival_HP
                     damage_rival_team += active_rival_HP
@@ -324,8 +383,15 @@ def simulate_battle(team: list, rival_team: list, available_mt: list, available_
                         hp=active_HP,
                         total_damage=damage_team,
                         drain_attacks=drain_attacks,
+                        logs=logs,
                         verbose=verbose
                     )
+
+                    if player_uses_hyperbeam:
+                        player_must_recharge = True
+                    if rival_uses_hyperbeam:
+                        rival_must_recharge = False
+
                 else:
                     real_damage = player_damage
                     damage_rival_team += player_damage
@@ -338,8 +404,19 @@ def simulate_battle(team: list, rival_team: list, available_mt: list, available_
                         hp=active_HP,
                         total_damage=damage_team,
                         drain_attacks=drain_attacks,
+                        logs=logs,
                         verbose=verbose
                     )
+
+                    if player_uses_hyperbeam:
+                        player_must_recharge = True
+                    if rival_uses_hyperbeam:
+                        rival_must_recharge = True
+
+        if not player_uses_hyperbeam:
+            player_must_recharge = False
+        if not rival_uses_hyperbeam:
+            rival_must_recharge = False
 
         logs.append(activePkm["species"] + " HP " + str(active_HP))
         logs.append(rival_team[rival_selected_pos]["species"] + " HP " + str(active_rival_HP))
@@ -360,11 +437,51 @@ def calculate_fitness(individual:list, dataset, verbose: bool):
     fitness_value = 0
     feasibility = True
     entire_logs = []
-    
-    start = time.perf_counter()
 
     teams = individual[1]
     for i in range(0, len(teams)):
+        pkm_catched_previously = pkm_catched[:PREVIOUS_ROUTES_TO_TRAINER[TRAINERS_ORDER[i]]]
+        # Comprobar que el equipo utilizado ha sido atrapado, sino penalizar con + INF y dejar de calcular
+        for pkm in teams[i]:
+            if(pkm not in pkm_catched_previously):
+                return (False, float('inf'), entire_logs)
+        print("SIMULATE")
+        print(teams[i])
+        print(TRAINERS[TRAINERS_ORDER[i]])
+       
+        (player_wins, damage_team, logs) = simulate_battle(
+                team=teams[i], 
+                rival_team=TRAINERS[TRAINERS_ORDER[i]], 
+                available_mt=AVAILABLE_MT_TRAINERS[TRAINERS_ORDER[i]],
+                available_ev_obj=AVAILABLE_EVOLVE_OBJ_TRAINERS[TRAINERS_ORDER[i]], 
+                dataset=dataset, 
+                verbose=verbose
+        )
+        entire_logs += logs
+        if not player_wins:
+            feasibility = False
+            fitness_value += 10000
+        else:
+            fitness_value += damage_team
+
+    return (feasibility, fitness_value, entire_logs)
+
+def approximate_fitness(number_of_battles: 5, individual:list, dataset, verbose: bool):
+    '''
+        individual: list
+            - first element: list of int that reference pkmID of catched
+    '''
+    pkm_catched = individual[0]
+    fitness_value = 0
+    feasibility = True
+    entire_logs = []
+
+    teams = individual[1]
+
+    random_teams = random.sample(range(len(teams)), number_of_battles)
+    pkm_defeated = 0
+
+    for i in random_teams:
         pkm_catched_previously = pkm_catched[:PREVIOUS_ROUTES_TO_TRAINER[TRAINERS_ORDER[i]]]
         # Comprobar que el equipo utilizado ha sido atrapado, sino penalizar con + INF y dejar de calcular
         for pkm in teams[i]:
@@ -384,14 +501,15 @@ def calculate_fitness(individual:list, dataset, verbose: bool):
             fitness_value += 10000
         else:
             fitness_value += damage_team
+        pkm_defeated += len(TRAINERS[TRAINERS_ORDER[i]])
 
-    
-
-    end = time.perf_counter()
-    elapsed_seconds = end - start
-    print(elapsed_seconds)
-
-    return (feasibility, fitness_value, entire_logs)
+    return (feasibility, int(fitness_value * (TOTAL_RIVAL_PKM/pkm_defeated)), entire_logs)
 
 
 dataset = load_json_in_dataset()
+
+calculate_fitness([[7, 19, 21, 16, 25, 29, 56, 74, 69, 63, 43, 52, 23, 50, 27, 100, 95, 58, 37, 84, 104, 129, 79, 48, None, 128, None, None, 98, 54, 116, 41, 109, 125, 118, 66], [[16, 7, 25, 19, 21], [7, 25, 74, 63, 16, 69], [56, 43, 25, 7, 
+52, 74], [25, 100, 37, 104, 95, 27], [58, 25, 21, 19, 27, 104], [27, 56, 16, 104, 37, 79], [7, 128, 37, 27, 129, 48], [21, 52, 128, 129, 29, 79], [56, 48, 98, 19, 63, 29], [74, 16, 109, 128, 54, 98], [118, 95, 23, 37, 98, 79], [58, 100, 29, 52, 95, 118], [56, 50, 41, 52, 58, 109], [109, 58, 7, 25, 54, 79]]], dataset, True)
+
+
+print("FIN")

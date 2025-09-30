@@ -274,6 +274,134 @@ class MapPanel(QWidget):
         self.update()
         self.resizeEvent(None)
 
+class CombatPanel(QWidget):
+    def __init__(self, pkGIFList: list, feasibility: bool):
+        super().__init__()
+
+        self.setMouseTracking(True)
+        # --- Imagen base ---
+        self.map_label = QLabel(self)
+        self.pixmap = QPixmap("images/forest.png")
+        self.map_label.setPixmap(self.pixmap)
+        self.map_label.setScaledContents(True)
+
+        # Widgets que representan cada ruta (gif o texto)
+        self.route_widgets = []
+        for i, pkGIF in enumerate(pkGIFList):
+            gif_label = QLabel(self)
+            movie = QMovie(pkGIF)
+            gif_label.setMovie(movie)
+            movie.start()
+
+            name_label = QLabel(ROUTE_NAMES[i], self)
+            name_label.setStyleSheet("color: white; background-color: rgba(0,0,0,150); padding: 2px;")
+            name_label.adjustSize()
+            
+            name_label_direction = select_direction(ROUTE_NAMES[i])
+
+            if pkGIF in ["./pkm_data/manual_sprites/not_captured.gif",
+                        "./pkm_data/manual_sprites/not_captured_yet.gif"]:
+                self.route_widgets.append((gif_label, movie, "ball", name_label, name_label_direction))
+            else:
+                self.route_widgets.append((gif_label, movie, "pkm", name_label, name_label_direction))
+
+        # --- Texto ---
+        if feasibility:
+            self.text_label = QLabel("Individuo: Factible", self)
+        else:
+            self.text_label = QLabel("Individuo: No factible", self)
+
+        self.text_label.setStyleSheet("color: white; background-color: rgba(0,0,0,150); padding: 4px;")
+        self.pos_text = (0, 0)
+
+    def resizeEvent(self, event):
+        w = self.width()
+        h = self.height()
+
+        # Redimensionar el mapa
+        self.map_label.resize(w, h)
+
+        # Calcular tamaño relativo para los GIFs / labels
+        increment_gif = 1
+        #widget_size_ball = int(w * 0.1 * reducer_gif), int(h * 0.15 * reducer_gif)
+        widget_size_pkm = int(w * 0.1 * increment_gif), int(h * 0.15 * increment_gif)
+
+        for i, (widget, movie, type, name_label, name_label_direction) in enumerate(self.route_widgets):
+            if type == "pkm":
+                x = int(w * PK_POSITIONS[i][0])
+                y = int(h * PK_POSITIONS[i][1])
+                if name_label_direction == "left":
+                    name_label.move(int(x - name_label.width() + w * 0.02), int(y - name_label.height() + h * 0.15))
+                if name_label_direction == "right":
+                    name_label.move(int(x + w * 0.078), int(y - name_label.height() + h * 0.15))
+                if name_label_direction == "down":
+                    name_label.move(int(x + w * 0.025), int(y - name_label.height() + h * 0.18))
+                if name_label_direction == "up":
+                    name_label.move(int(x + w * 0.025), int(y - name_label.height() + h * 0.08))
+            else:
+                x = int(w * PK_POSITIONS[i][0])
+                y = int(h * (PK_POSITIONS[i][1] + 0.05))
+                if name_label_direction == "left":
+                    name_label.move(int(x - name_label.width() + w * 0.02), int(y - name_label.height() + h * 0.1))
+                if name_label_direction == "right":
+                    name_label.move(int(x + w * 0.078), int(y - name_label.height() + h * 0.1))
+                if name_label_direction == "down":
+                    name_label.move(int(x + w * 0.025), int(y - name_label.height() + h * 0.13))
+                if name_label_direction == "up":
+                    name_label.move(int(x + w * 0.025), int(y - name_label.height() + h * 0.03))
+            
+            widget.resize(*widget_size_pkm)
+            widget.move(x, y)
+            movie.setScaledSize(widget.size())
+
+            # Label a la izquierda del GIF
+            #name_label.move(x - name_label.width(), y + widget.height()//2 - name_label.height()//2)
+            
+            font_size = max(int(h * 0.02), 1)
+            name_label.setFont(QFont("Arial", font_size))
+            name_label.adjustSize()
+
+        # --- Texto general ---
+        self.text_label.move(int(w * self.pos_text[0]), int(h * self.pos_text[1]))
+        font_size = max(int(h * 0.03), 8)  # fuente proporcional a la altura
+        self.text_label.setFont(QFont("Arial", font_size))
+        self.text_label.adjustSize()
+
+    def update_CombatPanel(self, pkGIFList: list):
+        """Actualiza la lista de sprites mostrados en el mapa"""
+        # Eliminar los widgets anteriores
+        for widget, movie, type, name_label, name_label_direction in self.route_widgets:
+            widget.setParent(None)
+            movie.stop()
+            name_label.setParent(None)
+
+        self.route_widgets = []
+
+        # Crear los nuevos
+        for i, pkGIF in enumerate(pkGIFList):
+            gif_label = QLabel(self)
+            movie = QMovie(pkGIF)
+            gif_label.setMovie(movie)
+            movie.start()
+            gif_label.show()
+
+            name_label = QLabel(ROUTE_NAMES[i], self)
+            name_label.setStyleSheet("color: white; background-color: rgba(0,0,0,150); padding: 2px;")
+            name_label.adjustSize()
+            name_label.show()
+
+            name_label_direction = select_direction(ROUTE_NAMES[i])
+
+            if pkGIF in ["./pkm_data/manual_sprites/not_captured.gif",
+                        "./pkm_data/manual_sprites/not_captured_yet.gif"]:
+                self.route_widgets.append((gif_label, movie, "ball", name_label, name_label_direction))
+            else:
+                self.route_widgets.append((gif_label, movie, "pkm", name_label, name_label_direction))
+
+        # Forzar redibujo y reposicionamiento
+        self.update()
+        self.resizeEvent(None)
+
 class App(QWidget):
     def __init__(self, individual, feasibility, fitness_value, entire_logs):
         super().__init__()
@@ -404,13 +532,23 @@ class App(QWidget):
         self.submenu_stack.addWidget(submenu_map)      # index 0
         self.submenu_stack.addWidget(submenu_combat)   # index 1
 
-        # ===== PANEL CENTRAL =====
+        # PANEL CENTRAL (StackedWidget con MapPanel y CombatPanel)
+        self.central_stack = QStackedWidget()
+
+        # Panel de mapas
         self.map_panel = MapPanel(self.pkGIFList, feasibility)
+
+        # Panel de combates
+        self.combat_panel = CombatPanel(self.pkGIFList, feasibility)  # <- tu widget CombatPanel
+
+        # Añadir al stack
+        self.central_stack.addWidget(self.map_panel)    # index 0
+        self.central_stack.addWidget(self.combat_panel) # index 1
 
         # Añadir al layout principal
         layout.addWidget(main_menu_widget)
         layout.addWidget(self.submenu_stack)
-        layout.addWidget(self.map_panel, stretch=1)
+        layout.addWidget(self.central_stack, stretch=1)
 
         # Mostrar por defecto el menú de mapa y seleccionar opciones por defecto
         self.show_submenu("mapa", individual=individual)
@@ -428,6 +566,7 @@ class App(QWidget):
         # Seleccionar nuevo botón principal
         if menu_type == "mapa":
             self.submenu_stack.setCurrentIndex(0)
+            self.central_stack.setCurrentIndex(0)   # panel central = MapPanel
             self.selected_main_button = self.btn_map
             
             # Forzar siempre selección del predeterminado "MAPA COMPLETO"
@@ -438,6 +577,7 @@ class App(QWidget):
                         
         elif menu_type == "combates":
             self.submenu_stack.setCurrentIndex(1)
+            self.central_stack.setCurrentIndex(1)   # panel central = CombatPanel
             self.selected_main_button = self.btn_combat
             
             # Forzar siempre selección del predeterminado "GYM PLATEADA"

@@ -36,4 +36,3 @@ def generate_individual():
     ]
 
 INDIVIDUAL_EXAMPLE = generate_individual()
-print(INDIVIDUAL_EXAMPLE)
