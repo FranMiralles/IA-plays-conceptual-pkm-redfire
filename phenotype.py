@@ -147,7 +147,7 @@ def select_direction(route_name: str):
         return "up"
 
 class MapPanel(QWidget):
-    def __init__(self, pkGIFList: list, feasibility: bool):
+    def __init__(self, pkGIFList: list):
         super().__init__()
 
         self.setMouseTracking(True)
@@ -177,14 +177,6 @@ class MapPanel(QWidget):
             else:
                 self.route_widgets.append((gif_label, movie, "pkm", name_label, name_label_direction))
 
-        # --- Texto ---
-        if feasibility:
-            self.text_label = QLabel("Individuo: Factible", self)
-        else:
-            self.text_label = QLabel("Individuo: No factible", self)
-
-        self.text_label.setStyleSheet("color: white; background-color: rgba(0,0,0,150); padding: 4px;")
-        self.pos_text = (0, 0)
 
     def resizeEvent(self, event):
         w = self.width()
@@ -233,11 +225,6 @@ class MapPanel(QWidget):
             name_label.setFont(QFont("Arial", font_size))
             name_label.adjustSize()
 
-        # --- Texto general ---
-        self.text_label.move(int(w * self.pos_text[0]), int(h * self.pos_text[1]))
-        font_size = max(int(h * 0.03), 8)  # fuente proporcional a la altura
-        self.text_label.setFont(QFont("Arial", font_size))
-        self.text_label.adjustSize()
 
     def update_MapPanel(self, pkGIFList: list):
         """Actualiza la lista de sprites mostrados en el mapa"""
@@ -275,7 +262,7 @@ class MapPanel(QWidget):
         self.resizeEvent(None)
 
 class CombatPanel(QWidget):
-    def __init__(self, pkGIFList: list, feasibility: bool):
+    def __init__(self, teamsGIFList: list):
         super().__init__()
 
         self.setMouseTracking(True)
@@ -284,35 +271,59 @@ class CombatPanel(QWidget):
         self.pixmap = QPixmap("images/forest.png")
         self.map_label.setPixmap(self.pixmap)
         self.map_label.setScaledContents(True)
-
-        # Widgets que representan cada ruta (gif o texto)
-        self.route_widgets = []
-        for i, pkGIF in enumerate(pkGIFList):
-            gif_label = QLabel(self)
-            movie = QMovie(pkGIF)
-            gif_label.setMovie(movie)
-            movie.start()
-
-            name_label = QLabel(ROUTE_NAMES[i], self)
-            name_label.setStyleSheet("color: white; background-color: rgba(0,0,0,150); padding: 2px;")
-            name_label.adjustSize()
-            
-            name_label_direction = select_direction(ROUTE_NAMES[i])
-
-            if pkGIF in ["./pkm_data/manual_sprites/not_captured.gif",
-                        "./pkm_data/manual_sprites/not_captured_yet.gif"]:
-                self.route_widgets.append((gif_label, movie, "ball", name_label, name_label_direction))
-            else:
-                self.route_widgets.append((gif_label, movie, "pkm", name_label, name_label_direction))
-
-        # --- Texto ---
-        if feasibility:
-            self.text_label = QLabel("Individuo: Factible", self)
-        else:
-            self.text_label = QLabel("Individuo: No factible", self)
-
-        self.text_label.setStyleSheet("color: white; background-color: rgba(0,0,0,150); padding: 4px;")
-        self.pos_text = (0, 0)
+        
+        # Lista de equipos del jugador (cada equipo es una lista de GIFs)
+        self.teamsGIFList = teamsGIFList
+        self.current_team_index = 0
+        
+        # Definir equipos rivales (pkmID)
+        self.rival_teams = {
+            "GYM_PLATEADA": [74, 95],
+            "GYM_CELESTE": [120, 121],
+            "GYM_CARMIN": [100, 25, 26],
+            "GYM_AZULONA": [71, 114, 45],
+            "GIOVANNI_AZULONA": [95, 111, 115],
+            "GIOVANNI_AZAFRAN": [33, 111, 115, 31],
+            "GYM_FUCSIA": [109, 109, 89, 110],
+            "GYM_AZAFRAN": [64, 49, 122, 65],
+            "GYM_CANELA": [58, 77, 78, 59],
+            "GYM_VERDE": [111, 51, 34, 31, 111],
+            "ALTO_MANDO_LORELEI": [87, 91, 80, 124, 131],
+            "ALTO_MANDO_BRUNO": [95, 107, 106, 95, 68],
+            "ALTO_MANDO_AGATHA": [94, 42, 93, 24, 94],
+            "ALTO_MANDO_LANCE": [130, 148, 148, 142, 149]
+        }
+        
+        # Convertir IDs rivales a GIFs
+        self.rival_teams_gifs = {}
+        for trainer, team_ids in self.rival_teams.items():
+            gif_team = []
+            for pkm_id in team_ids:
+                gif_path = dataset["pkdex"][str(pkm_id)]["sprite"]["front"]
+                gif_team.append(gif_path)
+            self.rival_teams_gifs[trainer] = gif_team
+        
+        # Mapeo de nombres de botones a claves de equipos rivales
+        self.button_to_rival_key = {
+            "GYM PLATEADA": "GYM_PLATEADA",
+            "GYM CELESTE": "GYM_CELESTE", 
+            "GYM CARMIN": "GYM_CARMIN",
+            "GYM AZULONA": "GYM_AZULONA",
+            "GIOVANNI AZULONA": "GIOVANNI_AZULONA",
+            "GIOVANNI AZAFRAN": "GIOVANNI_AZAFRAN",
+            "GYM FUCSIA": "GYM_FUCSIA",
+            "GYM AZAFRAN": "GYM_AZAFRAN",
+            "GYM CANELA": "GYM_CANELA",
+            "GYM VERDE": "GYM_VERDE",
+            "ALTO MANDO LORELEI": "ALTO_MANDO_LORELEI",
+            "ALTO MANDO BRUNO": "ALTO_MANDO_BRUNO",
+            "ALTO MANDO AGATHA": "ALTO_MANDO_AGATHA",
+            "ALTO MANDO LANCE": "ALTO_MANDO_LANCE"
+        }
+        
+        # Listas para almacenar los widgets de Pokémon
+        self.player_widgets = []
+        self.rival_widgets = []
 
     def resizeEvent(self, event):
         w = self.width()
@@ -320,87 +331,95 @@ class CombatPanel(QWidget):
 
         # Redimensionar el mapa
         self.map_label.resize(w, h)
+        
+        # Reposicionar los Pokémon de ambos equipos
+        self.position_team_widgets(w, h)
 
-        # Calcular tamaño relativo para los GIFs / labels
-        increment_gif = 1
-        #widget_size_ball = int(w * 0.1 * reducer_gif), int(h * 0.15 * reducer_gif)
-        widget_size_pkm = int(w * 0.1 * increment_gif), int(h * 0.15 * increment_gif)
-
-        for i, (widget, movie, type, name_label, name_label_direction) in enumerate(self.route_widgets):
-            if type == "pkm":
-                x = int(w * PK_POSITIONS[i][0])
-                y = int(h * PK_POSITIONS[i][1])
-                if name_label_direction == "left":
-                    name_label.move(int(x - name_label.width() + w * 0.02), int(y - name_label.height() + h * 0.15))
-                if name_label_direction == "right":
-                    name_label.move(int(x + w * 0.078), int(y - name_label.height() + h * 0.15))
-                if name_label_direction == "down":
-                    name_label.move(int(x + w * 0.025), int(y - name_label.height() + h * 0.18))
-                if name_label_direction == "up":
-                    name_label.move(int(x + w * 0.025), int(y - name_label.height() + h * 0.08))
-            else:
-                x = int(w * PK_POSITIONS[i][0])
-                y = int(h * (PK_POSITIONS[i][1] + 0.05))
-                if name_label_direction == "left":
-                    name_label.move(int(x - name_label.width() + w * 0.02), int(y - name_label.height() + h * 0.1))
-                if name_label_direction == "right":
-                    name_label.move(int(x + w * 0.078), int(y - name_label.height() + h * 0.1))
-                if name_label_direction == "down":
-                    name_label.move(int(x + w * 0.025), int(y - name_label.height() + h * 0.13))
-                if name_label_direction == "up":
-                    name_label.move(int(x + w * 0.025), int(y - name_label.height() + h * 0.03))
+    def position_team_widgets(self, w, h):
+        """Posiciona los widgets de ambos equipos en el panel"""
+        # Calcular tamaño de cada Pokémon
+        widget_size = int(w * 0.2), int(h * 0.3)
+        
+        # Posiciones del jugador: empezar en (0.2w, 0.2h) y bajar en intervalos de 0.1 en y
+        player_base_x = 0.25
+        player_base_y = -0.1
+        y_increment = 0.14
+        
+        # Posicionar Pokémon del jugador (lado izquierdo)
+        for i, (widget, movie) in enumerate(self.player_widgets):
+            x = int(w * player_base_x)
+            y = int(h * (player_base_y + (i * y_increment)))
             
-            widget.resize(*widget_size_pkm)
+            widget.resize(*widget_size)
+            widget.move(x, y)
+            movie.setScaledSize(widget.size())
+        
+        # Posiciones del rival: empezar en (0.8w, 0.2h) y bajar en intervalos de 0.1 en y
+        rival_base_x = 0.45
+        rival_base_y = -0.1
+        
+        # Posicionar Pokémon del rival (lado derecho)
+        for i, (widget, movie) in enumerate(self.rival_widgets):
+            x = int(w * rival_base_x)
+            y = int(h * (rival_base_y + (i * y_increment)))
+            
+            widget.resize(*widget_size)
             widget.move(x, y)
             movie.setScaledSize(widget.size())
 
-            # Label a la izquierda del GIF
-            #name_label.move(x - name_label.width(), y + widget.height()//2 - name_label.height()//2)
+    def update_CombatPanel(self, team_index: int, button_text: str = None):
+        """Actualiza ambos equipos mostrados según el índice del botón pulsado"""
+        # Validar índice del jugador
+        if team_index < 0 or team_index >= len(self.teamsGIFList):
+            return
             
-            font_size = max(int(h * 0.02), 1)
-            name_label.setFont(QFont("Arial", font_size))
-            name_label.adjustSize()
-
-        # --- Texto general ---
-        self.text_label.move(int(w * self.pos_text[0]), int(h * self.pos_text[1]))
-        font_size = max(int(h * 0.03), 8)  # fuente proporcional a la altura
-        self.text_label.setFont(QFont("Arial", font_size))
-        self.text_label.adjustSize()
-
-    def update_CombatPanel(self, pkGIFList: list):
-        """Actualiza la lista de sprites mostrados en el mapa"""
-        # Eliminar los widgets anteriores
-        for widget, movie, type, name_label, name_label_direction in self.route_widgets:
-            widget.setParent(None)
-            movie.stop()
-            name_label.setParent(None)
-
-        self.route_widgets = []
-
-        # Crear los nuevos
-        for i, pkGIF in enumerate(pkGIFList):
+        self.current_team_index = team_index
+        
+        # Limpiar widgets anteriores
+        self.clear_team_widgets()
+        
+        # Crear nuevos widgets para el equipo del jugador
+        player_team_gifs = self.teamsGIFList[team_index]
+        for gif_path in player_team_gifs:
             gif_label = QLabel(self)
-            movie = QMovie(pkGIF)
+            movie = QMovie(gif_path)
             gif_label.setMovie(movie)
             movie.start()
             gif_label.show()
-
-            name_label = QLabel(ROUTE_NAMES[i], self)
-            name_label.setStyleSheet("color: white; background-color: rgba(0,0,0,150); padding: 2px;")
-            name_label.adjustSize()
-            name_label.show()
-
-            name_label_direction = select_direction(ROUTE_NAMES[i])
-
-            if pkGIF in ["./pkm_data/manual_sprites/not_captured.gif",
-                        "./pkm_data/manual_sprites/not_captured_yet.gif"]:
-                self.route_widgets.append((gif_label, movie, "ball", name_label, name_label_direction))
-            else:
-                self.route_widgets.append((gif_label, movie, "pkm", name_label, name_label_direction))
-
+            
+            self.player_widgets.append((gif_label, movie))
+        
+        # Crear widgets para el equipo rival (si se proporcionó el botón)
+        if button_text and button_text in self.button_to_rival_key:
+            rival_key = self.button_to_rival_key[button_text]
+            if rival_key in self.rival_teams_gifs:
+                rival_team_gifs = self.rival_teams_gifs[rival_key]
+                for gif_path in rival_team_gifs:
+                    gif_label = QLabel(self)
+                    movie = QMovie(gif_path)
+                    gif_label.setMovie(movie)
+                    movie.start()
+                    gif_label.show()
+                    
+                    self.rival_widgets.append((gif_label, movie))
+        
         # Forzar redibujo y reposicionamiento
         self.update()
         self.resizeEvent(None)
+
+    def clear_team_widgets(self):
+        """Elimina todos los widgets de ambos equipos"""
+        # Limpiar equipo del jugador
+        for widget, movie in self.player_widgets:
+            widget.setParent(None)
+            movie.stop()
+        self.player_widgets = []
+        
+        # Limpiar equipo rival
+        for widget, movie in self.rival_widgets:
+            widget.setParent(None)
+            movie.stop()
+        self.rival_widgets = []
 
 class App(QWidget):
     def __init__(self, individual, feasibility, fitness_value, entire_logs):
@@ -413,6 +432,15 @@ class App(QWidget):
             else:
                 gif_path = dataset["pkdex"][str(pkmID)]["sprite"]["front"]
                 self.pkGIFList.append(gif_path)
+
+        self.teamsGIFList = []
+        for team in individual[1]:
+            team_trainer = []
+            for pkmID in team:
+                gif_path = dataset["pkdex"][str(pkmID)]["sprite"]["front"]
+                team_trainer.append(gif_path)
+            self.teamsGIFList.append(team_trainer)
+
 
         self.setWindowTitle("Fenotipo")
         self.setGeometry(200, 200, 1000, 750)
@@ -536,10 +564,10 @@ class App(QWidget):
         self.central_stack = QStackedWidget()
 
         # Panel de mapas
-        self.map_panel = MapPanel(self.pkGIFList, feasibility)
+        self.map_panel = MapPanel(self.pkGIFList)
 
         # Panel de combates
-        self.combat_panel = CombatPanel(self.pkGIFList, feasibility)  # <- tu widget CombatPanel
+        self.combat_panel = CombatPanel(self.teamsGIFList)  # <- tu widget CombatPanel
 
         # Añadir al stack
         self.central_stack.addWidget(self.map_panel)    # index 0
@@ -574,17 +602,20 @@ class App(QWidget):
                 self.submenu_buttons["mapa"][0], "mapa", "MAPA COMPLETO",
                 individual=individual, force_select=True
             )
-                        
         elif menu_type == "combates":
             self.submenu_stack.setCurrentIndex(1)
             self.central_stack.setCurrentIndex(1)   # panel central = CombatPanel
             self.selected_main_button = self.btn_combat
             
             # Forzar siempre selección del predeterminado "GYM PLATEADA"
+            default_button = self.submenu_buttons["combates"][0]
             self.select_sub_button(
-                self.submenu_buttons["combates"][0], "combates",
+                default_button, 
+                "combates",
                 force_select=True
             )
+            # Asegurar que se muestre el equipo 0
+            self.combat_panel.update_CombatPanel(0, default_button.text())
         
         # Aplicar estilo al botón principal seleccionado
         if self.selected_main_button:
@@ -652,13 +683,20 @@ class App(QWidget):
         # Actualizar referencia al botón seleccionado
         self.selected_sub_buttons[menu_type] = button
         
-
-
-        self.pkGIFList = []
-        for pkmID in INDIVIDUAL_EXAMPLE[0]:
-            self.pkGIFList.append("./pkm_data/manual_sprites/not_captured.gif")
-
-        self.map_panel.update_MapPanel(self.pkGIFList)
+        # Obtener el índice del botón pulsado en la lista de combates
+        combat_buttons = [
+            "GYM PLATEADA", "GYM CELESTE", "GYM CARMIN", "GYM AZULONA",
+            "GIOVANNI AZULONA", "GIOVANNI AZAFRAN", "GYM FUCSIA", "GYM AZAFRAN",
+            "GYM CANELA", "GYM VERDE", "ALTO MANDO LORELEI", "ALTO MANDO BRUNO",
+            "ALTO MANDO AGATHA", "ALTO MANDO LANCE"
+        ]
+        
+        # Encontrar el índice del botón en la lista
+        button_text = button.text()
+        if button_text in combat_buttons:
+            team_index = combat_buttons.index(button_text)
+            # Actualizar el CombatPanel con ambos equipos
+            self.combat_panel.update_CombatPanel(team_index, button_text)
 
 
 if __name__ == "__main__":

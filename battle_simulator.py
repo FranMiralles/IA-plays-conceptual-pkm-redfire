@@ -445,9 +445,6 @@ def calculate_fitness(individual:list, dataset, verbose: bool):
         for pkm in teams[i]:
             if(pkm not in pkm_catched_previously):
                 return (False, float('inf'), entire_logs)
-        print("SIMULATE")
-        print(teams[i])
-        print(TRAINERS[TRAINERS_ORDER[i]])
        
         (player_wins, damage_team, logs) = simulate_battle(
                 team=teams[i], 
@@ -508,8 +505,11 @@ def approximate_fitness(number_of_battles: 5, individual:list, dataset, verbose:
 
 dataset = load_json_in_dataset()
 
+'''
 calculate_fitness([[7, 19, 21, 16, 25, 29, 56, 74, 69, 63, 43, 52, 23, 50, 27, 100, 95, 58, 37, 84, 104, 129, 79, 48, None, 128, None, None, 98, 54, 116, 41, 109, 125, 118, 66], [[16, 7, 25, 19, 21], [7, 25, 74, 63, 16, 69], [56, 43, 25, 7, 
 52, 74], [25, 100, 37, 104, 95, 27], [58, 25, 21, 19, 27, 104], [27, 56, 16, 104, 37, 79], [7, 128, 37, 27, 129, 48], [21, 52, 128, 129, 29, 79], [56, 48, 98, 19, 63, 29], [74, 16, 109, 128, 54, 98], [118, 95, 23, 37, 98, 79], [58, 100, 29, 52, 95, 118], [56, 50, 41, 52, 58, 109], [109, 58, 7, 25, 54, 79]]], dataset, True)
 
 
 print("FIN")
+
+'''

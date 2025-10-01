@@ -179,4 +179,5 @@ for generation in range(0, 10000):
     best_fitness = min(current_fitness)
     avg_fitness = sum(current_fitness) / len(current_fitness)
     print(f"  Mejor fitness: {best_fitness:.4f}, Promedio: {avg_fitness:.4f}")
+    print("Población:")
     print(population)
