@@ -121,7 +121,6 @@ def cure_with_drain_move(attacker_name, attack, real_damage, hp, total_damage, d
         total_damage -= recovered
         if verbose and recovered > 0:
             log_message = f"{attacker_name} recovers {recovered} HP with {move_name}"
-            print(log_message)
             logs.append(log_message)
     return hp, total_damage
 
@@ -160,6 +159,8 @@ def simulate_battle(team: list, rival_team: list, available_mt: list, available_
                 break
         team_evolved.append(int(pkmID))
     team = team_evolved
+
+    logs.append(str(team_evolved))
     
 
     totalHP_team = len(team) * 100
@@ -171,9 +172,17 @@ def simulate_battle(team: list, rival_team: list, available_mt: list, available_
 
     drain_attacks = ["absorb", "mega-drain", "giga-drain"]
     explosion_moves = ["explosion", "self-destruct"]
+    
 
-    player_must_recharge = False
-    rival_must_recharge = False
+    player_must_recharge_HB = False # hyper beam
+    rival_must_recharge_HB = False # hyper beam
+
+    player_turns_using_sb = 0 # solar beam
+    rival_turns_using_sb = 0 # solar beam
+    player_turns_using_dig = 0 # dig
+    rival_turns_using_dig = 0 # dig
+    player_turns_using_fly = 0 # fly
+    rival_turns_using_fly = 0 # fly
 
     while damage_team < totalHP_team and damage_rival_team < totalHP_rival_team:
         # New turn
@@ -202,8 +211,8 @@ def simulate_battle(team: list, rival_team: list, available_mt: list, available_
         rival_selected_pos = damage_rival_team // 100
         active_rival_HP = 100 - (damage_rival_team % 100)
         
-        logs.append(activePkm["species"] + " HP " + str(active_HP))
-        logs.append(rival_team[rival_selected_pos]["species"] + " HP " + str(active_rival_HP))
+        logs.append("PLAYER " + activePkm["species"] + " HP " + str(active_HP))
+        logs.append("RIVAL " + rival_team[rival_selected_pos]["species"] + " HP " + str(active_rival_HP))
         
         # Choose which move selects each pkm
         activePkm_attack = select_best_attack(activePkm, rival_team[rival_selected_pos])
@@ -219,23 +228,88 @@ def simulate_battle(team: list, rival_team: list, available_mt: list, available_
             if activePkm["speed"] > rival_team[rival_selected_pos]["speed"]:
                 player_first = True
 
-        player_damage = round(activePkm_attack[1] * 100) if not player_must_recharge else 0
-        rival_damage = round(activePkm_rival_attack[1] * 100) if not rival_must_recharge else 0
 
-        player_uses_hyperbeam = True if activePkm_attack[0] == "hyper-beam" and not player_must_recharge else False
-        rival_uses_hyperbeam = True if activePkm_rival_attack[0] == "hyper-beam" and not rival_must_recharge else False
+        # FLAGS CASES
 
-        player_uses_explosion = True if activePkm_attack[0] in explosion_moves and not player_must_recharge else False
-        rival_uses_explosion = True if activePkm_rival_attack[0] in explosion_moves and not rival_must_recharge else False
+        # Hyper beam
+        player_uses_hyperbeam = True if activePkm_attack[0] == "hyper-beam" and not player_must_recharge_HB else False
+        rival_uses_hyperbeam = True if activePkm_rival_attack[0] == "hyper-beam" and not rival_must_recharge_HB else False
+
+        # Solar beam
+        if activePkm_attack[0] == "solar-beam":  
+            player_turns_using_sb += 1
+        else:
+            player_turns_using_sb = 0
+        if activePkm_rival_attack[0] == "solar-beam":  
+            rival_turns_using_sb += 1
+        else:
+            rival_turns_using_sb = 0
         
+        # Dig
+        if activePkm_attack[0] == "dig":  
+            player_turns_using_dig += 1
+        else:
+            player_turns_using_dig = 0
+        if activePkm_rival_attack[0] == "dig":
+            rival_turns_using_dig += 1
+        else:
+            rival_turns_using_dig = 0
 
+        # Fly
+        if activePkm_attack[0] == "fly":
+            player_turns_using_fly += 1
+        else:
+            player_turns_using_fly = 0
+        if activePkm_rival_attack[0] == "fly":
+            rival_turns_using_fly += 1
+        else:
+            rival_turns_using_fly = 0
+
+        # Dive
+        if activePkm_attack[0] == "dive":
+            player_turns_using_dive += 1
+        else:
+            player_turns_using_dive = 0
+        if activePkm_rival_attack[0] == "dive":
+            rival_turns_using_dive += 1
+        else:
+            rival_turns_using_dive = 0
+
+        # Damage
+        player_damage = round(activePkm_attack[1] * 100) if not player_must_recharge_HB and player_turns_using_sb != 1 and player_turns_using_dig != 1 and player_turns_using_fly != 1 and player_turns_using_dive != 1 else 0
+        rival_damage = round(activePkm_rival_attack[1] * 100) if not rival_must_recharge_HB and rival_turns_using_sb != 1 and rival_turns_using_dig != 1 and rival_turns_using_fly != 1 and rival_turns_using_dive != 1 else 0
+
+
+        # player_uses_explosion = True if activePkm_attack[0] in explosion_moves and not player_must_recharge_HB else False
+        # rival_uses_explosion = True if activePkm_rival_attack[0] in explosion_moves and not rival_must_recharge_HB else False
+        
+        # TURN
         # Perform first move and reduce hp
         if player_first:
             # Player attacks first
-            if player_damage == 0:
-                    logs.append(activePkm["species"] + " must recharge!")
+            if player_must_recharge_HB:
+                logs.append("PLAYER " + activePkm["species"] + " must recharge!")
+            elif player_turns_using_sb == 1:
+                logs.append("PLAYER " + activePkm["species"] + " took in sunlight!")
+            elif player_turns_using_dig == 1:
+                logs.append("PLAYER " + activePkm["species"] + " dug a hole!")
+                rival_damage = 0
+            elif player_turns_using_fly == 1:
+                logs.append("PLAYER " + activePkm["species"] + " flew up high!")
+                rival_damage = 0
+            elif player_turns_using_dive == 1:
+                logs.append("PLAYER " + activePkm["species"] + " hid underwater!")
+                rival_damage = 0
             else:
-                logs.append(activePkm["species"] + " attacks with " + str(activePkm_attack))
+                logs.append("PLAYER " + activePkm["species"] + " attacks with " + str(activePkm_attack))
+
+            # Rival is inmune if has used in the last turn an inmune attack
+            if rival_turns_using_dig == 2:
+                player_damage = 0
+            if rival_turns_using_fly == 2:
+                player_damage = 0
+            if rival_turns_using_dive == 2:
+                player_damage = 0
 
             # Normal behaviour
             if active_rival_HP <= player_damage:
@@ -256,9 +330,9 @@ def simulate_battle(team: list, rival_team: list, available_mt: list, available_
                 )
 
                 if player_uses_hyperbeam:
-                    player_must_recharge = True
+                    player_must_recharge_HB = True
                 if rival_uses_hyperbeam:
-                    rival_must_recharge = False
+                    rival_must_recharge_HB = False
 
             else:
                 real_damage = player_damage
@@ -277,10 +351,19 @@ def simulate_battle(team: list, rival_team: list, available_mt: list, available_
                 )
 
                 # Rival attacks back
-                if rival_damage == 0:
-                    logs.append(rival_team[rival_selected_pos]["species"] + " must recharge!")
+                if rival_must_recharge_HB:
+                    logs.append("RIVAL " + rival_team[rival_selected_pos]["species"] + " must recharge!")
+                elif rival_turns_using_sb == 1:
+                    logs.append("RIVAL " + rival_team[rival_selected_pos]["species"] + " took in sunlight!")
+                elif rival_turns_using_dig == 1:
+                    logs.append("RIVAL " + rival_team[rival_selected_pos]["species"] + " dug a hole!")
+                elif rival_turns_using_fly == 1:
+                    logs.append("RIVAL " + rival_team[rival_selected_pos]["species"] + " flew up high!")
+                elif rival_turns_using_dive == 1:
+                    logs.append("RIVAL " + rival_team[rival_selected_pos]["species"] + " hid underwater!")
                 else:
-                    logs.append(rival_team[rival_selected_pos]["species"] + " attacks with " + str(activePkm_rival_attack))
+                    logs.append("RIVAL " + rival_team[rival_selected_pos]["species"] + " attacks with " + str(activePkm_rival_attack))
+
                 if active_HP <= rival_damage:
                     real_damage = active_HP
                     damage_team += active_HP
@@ -299,9 +382,9 @@ def simulate_battle(team: list, rival_team: list, available_mt: list, available_
 
                     
                     if player_uses_hyperbeam:
-                        player_must_recharge = False
+                        player_must_recharge_HB = False
                     if rival_uses_hyperbeam:
-                        rival_must_recharge = True
+                        rival_must_recharge_HB = True
 
                 else:
                     real_damage = rival_damage
@@ -320,16 +403,36 @@ def simulate_battle(team: list, rival_team: list, available_mt: list, available_
                     )
 
                     if player_uses_hyperbeam:
-                        player_must_recharge = True
+                        player_must_recharge_HB = True
                     if rival_uses_hyperbeam:
-                        rival_must_recharge = True
+                        rival_must_recharge_HB = True
 
         else:
             # Rival attacks first
-            if rival_damage == 0:
-                logs.append(rival_team[rival_selected_pos]["species"] + " must recharge!")
+            if rival_must_recharge_HB:
+                logs.append("RIVAL " + rival_team[rival_selected_pos]["species"] + " must recharge!")
+            elif rival_turns_using_sb == 1:
+                logs.append("RIVAL " + rival_team[rival_selected_pos]["species"] + " took in sunlight!")
+            elif rival_turns_using_dig == 1:
+                logs.append("RIVAL " + rival_team[rival_selected_pos]["species"] + " dug a hole!")
+                player_damage = 0
+            elif rival_turns_using_fly == 1:
+                logs.append("RIVAL " + rival_team[rival_selected_pos]["species"] + " flew up high!")
+                player_damage = 0
+            elif rival_turns_using_dive == 1:
+                logs.append("RIVAL " + rival_team[rival_selected_pos]["species"] + " hid underwater!")
+                player_damage = 0
             else:
-                logs.append(rival_team[rival_selected_pos]["species"] + " attacks with " + str(activePkm_rival_attack))
+                logs.append("RIVAL " + rival_team[rival_selected_pos]["species"] + " attacks with " + str(activePkm_rival_attack))
+
+            # Player is inmune if has used in the last turn an inmune attack
+            if player_turns_using_dig == 2:
+                rival_damage = 0
+            if player_turns_using_fly == 2:
+                rival_damage = 0
+            if player_turns_using_dive == 2:
+                rival_damage = 0
+
             if active_HP <= rival_damage:
                 real_damage = active_HP
                 damage_team += active_HP
@@ -347,9 +450,9 @@ def simulate_battle(team: list, rival_team: list, available_mt: list, available_
                 )
 
                 if player_uses_hyperbeam:
-                    player_must_recharge = False
+                    player_must_recharge_HB = False
                 if rival_uses_hyperbeam:
-                    rival_must_recharge = True
+                    rival_must_recharge_HB = True
 
             else:
                 real_damage = rival_damage
@@ -367,10 +470,19 @@ def simulate_battle(team: list, rival_team: list, available_mt: list, available_
                     verbose=verbose
                 )
                 # Player attacks back
-                if player_damage == 0:
-                    logs.append(activePkm["species"] + " must recharge!")
+                if player_must_recharge_HB:
+                    logs.append("PLAYER " + activePkm["species"] + " must recharge!")
+                elif player_turns_using_sb == 1:
+                    logs.append("PLAYER " + activePkm["species"] + " took in sunlight!")
+                elif player_turns_using_dig == 1:
+                    logs.append("PLAYER " + activePkm["species"] + " dug a hole!")
+                elif player_turns_using_fly == 1:
+                    logs.append("PLAYER " + activePkm["species"] + " flew up high!")
+                elif player_turns_using_dive == 1:
+                    logs.append("PLAYER " + activePkm["species"] + " hid underwater!")
                 else:
-                    logs.append(activePkm["species"] + " attacks with " + str(activePkm_attack))
+                    logs.append("PLAYER " + activePkm["species"] + " attacks with " + str(activePkm_attack))
+
                 if active_rival_HP <= player_damage:
                     real_damage = active_rival_HP
                     damage_rival_team += active_rival_HP
@@ -388,9 +500,9 @@ def simulate_battle(team: list, rival_team: list, available_mt: list, available_
                     )
 
                     if player_uses_hyperbeam:
-                        player_must_recharge = True
+                        player_must_recharge_HB = True
                     if rival_uses_hyperbeam:
-                        rival_must_recharge = False
+                        rival_must_recharge_HB = False
 
                 else:
                     real_damage = player_damage
@@ -409,17 +521,40 @@ def simulate_battle(team: list, rival_team: list, available_mt: list, available_
                     )
 
                     if player_uses_hyperbeam:
-                        player_must_recharge = True
+                        player_must_recharge_HB = True
                     if rival_uses_hyperbeam:
-                        rival_must_recharge = True
+                        rival_must_recharge_HB = True
 
+        # NEXT TURN FLAGS
         if not player_uses_hyperbeam:
-            player_must_recharge = False
+            player_must_recharge_HB = False
         if not rival_uses_hyperbeam:
-            rival_must_recharge = False
+            rival_must_recharge_HB = False
+        if player_turns_using_sb > 1:
+            player_turns_using_sb = 0
+        if rival_turns_using_sb > 1:
+            rival_turns_using_sb = 0
+        # DIG
+        if player_turns_using_dig > 1:
+            player_turns_using_dig = 0
+        if rival_turns_using_dig > 1:
+            rival_turns_using_dig = 0
 
-        logs.append(activePkm["species"] + " HP " + str(active_HP))
-        logs.append(rival_team[rival_selected_pos]["species"] + " HP " + str(active_rival_HP))
+        # FLY
+        if player_turns_using_fly > 1:
+            player_turns_using_fly = 0
+        if rival_turns_using_fly > 1:
+            rival_turns_using_fly = 0
+
+        # DIVE
+        if player_turns_using_dive > 1:
+            player_turns_using_dive = 0
+        if rival_turns_using_dive > 1:
+            rival_turns_using_dive = 0
+
+
+        logs.append("PLAYER " + activePkm["species"] + " HP " + str(active_HP))
+        logs.append("RIVAL " + rival_team[rival_selected_pos]["species"] + " HP " + str(active_rival_HP))
     
     player_wins = (damage_team < totalHP_team)
 
@@ -454,7 +589,7 @@ def calculate_fitness(individual:list, dataset, verbose: bool):
                 dataset=dataset, 
                 verbose=verbose
         )
-        entire_logs += logs
+        entire_logs.append(logs)
         if not player_wins:
             feasibility = False
             fitness_value += 10000
@@ -504,12 +639,3 @@ def approximate_fitness(number_of_battles: 5, individual:list, dataset, verbose:
 
 
 dataset = load_json_in_dataset()
-
-'''
-calculate_fitness([[7, 19, 21, 16, 25, 29, 56, 74, 69, 63, 43, 52, 23, 50, 27, 100, 95, 58, 37, 84, 104, 129, 79, 48, None, 128, None, None, 98, 54, 116, 41, 109, 125, 118, 66], [[16, 7, 25, 19, 21], [7, 25, 74, 63, 16, 69], [56, 43, 25, 7, 
-52, 74], [25, 100, 37, 104, 95, 27], [58, 25, 21, 19, 27, 104], [27, 56, 16, 104, 37, 79], [7, 128, 37, 27, 129, 48], [21, 52, 128, 129, 29, 79], [56, 48, 98, 19, 63, 29], [74, 16, 109, 128, 54, 98], [118, 95, 23, 37, 98, 79], [58, 100, 29, 52, 95, 118], [56, 50, 41, 52, 58, 109], [109, 58, 7, 25, 54, 79]]], dataset, True)
-
-
-print("FIN")
-
-'''

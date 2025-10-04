@@ -15,6 +15,7 @@ def guardar_json(datos, nombre_archivo):
 
 def save_moves():
     moves = {}
+    banned_moves = ["dream-eater", "horn-drill", "guillotine", "fissure"]
     for i in range(1, 400):
         print(f"Obteniendo datos del movimiento {i}...")
         res = requests.get(f"https://pokeapi.co/api/v2/move/{i}")
@@ -22,7 +23,7 @@ def save_moves():
             result = res.json()
             # Si hay alguna descripción del firered-leafgreen, guardo el movimiento, sino no
             # Si el movimiento es de estado, no lo guardo
-            if(result["damage_class"]["name"] == "physical" or result["damage_class"]["name"] == "special"):
+            if(result["damage_class"]["name"] == "physical" or result["damage_class"]["name"] == "special") and result["name"] not in banned_moves:
                 for entry in result["flavor_text_entries"]:
                     if entry["version_group"]["name"] == "firered-leafgreen":
                         moves[result["name"]] = result["priority"]
@@ -141,7 +142,30 @@ def save_evolutions():
                 
                 # Iniciar el procesamiento
                 process_chain(evolution_data['chain'], initial_id)
-                
+                # Caso concreto de gloom
+                evolution_dict[44] = [
+                    45,
+                    "use-item",
+                    "leaf-stone"
+                ]
+                # Caso concreto de vulpix
+                evolution_dict[37] = [
+                    38,
+                    "use-item",
+                    "fire-stone"
+                ]
+                # Caso concreto de vulpix
+                evolution_dict[79] = [
+                    80,
+                    "level-up",
+                    39
+                ]
+                # Caso concreto de sandshrew
+                evolution_dict[27] = [
+                    28,
+                    "level-up",
+                    22
+                ]
                 return evolution_dict
 
             if res_chain.status_code == 200:

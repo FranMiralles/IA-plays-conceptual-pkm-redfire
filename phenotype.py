@@ -1,7 +1,7 @@
 import base64
 import sys
 from PyQt5.QtWidgets import QApplication, QLabel, QWidget, QHBoxLayout, QVBoxLayout, QPushButton, QStackedWidget
-from PyQt5.QtGui import QPixmap, QMovie, QFont
+from PyQt5.QtGui import QPixmap, QMovie, QFont, QPainter, QColor
 from PyQt5.QtCore import Qt
 import requests
 from io import BytesIO
@@ -9,6 +9,8 @@ from tempfile import NamedTemporaryFile
 from battle_simulator import *
 from individual import INDIVIDUAL_EXAMPLE
 from route_data.trainers import PREVIOUS_ROUTES_TO_TRAINER, TRAINERS_ORDER
+from genetic_operators import *
+import re
 
 STYLE_SHEET = """
             /* Estilos modernos */
@@ -86,6 +88,24 @@ STYLE_SHEET = """
             }
         """
 
+    # Estilo de los botones
+button_style = """
+    QPushButton {
+        background-color: rgba(70, 70, 70, 1);
+        color: white;
+        font-weight: bold;
+        border: 2px solid white;
+        border-radius: 5px;
+        padding: 5px;
+    }
+    QPushButton:hover {
+        background-color: rgba(100, 100, 100, 1);
+    }
+    QPushButton:pressed {
+        background-color: rgba(50, 50, 50, 1);
+    }
+"""
+
 PK_POSITIONS=[
     (0.181, 0.629), # PUEBLO PALETA
     (0.181, 0.535), # RUTA 1
@@ -136,6 +156,77 @@ ROUTE_NAMES = [
     "RUTA 23", "CALLE VICTORIA"
 ]
 
+# Label con dos colores separados verticalmente
+class DualColorLabel(QLabel):
+    def paintEvent(self, event):
+        painter = QPainter(self)
+        
+        # Mitad superior - Color 1
+        painter.fillRect(0, 0, self.width(), self.height() // 2, QColor(0, 0, 255, 65))
+        
+        # Mitad inferior - Color 2  
+        painter.fillRect(0, self.height() // 2, self.width(), self.height() // 2, QColor(255, 0, 0, 65))
+        
+SEPARATOR = " : "
+def prepare_entire_logs(entire_logs):
+    def get_pkmID(name: str):
+        for key in dict(dataset["pkdex"]).keys():
+            if dataset["pkdex"][key]["name"] == name:
+                return key
+        return 0
+
+    new_logs = []
+    for log in entire_logs:
+        new_log = []
+        active_player_pkm = None
+        active_rival_pkm = None
+        for i in range(len(log)):
+            if log[i].startswith("TURNO"):
+                player_line = log[i + 1].split(" ")
+                rival_line = log[i + 2].split(" ")
+                active_player_pkm = get_pkmID(player_line[1]) + "," + player_line[3]
+                active_rival_pkm = get_pkmID(rival_line[1]) + "," + rival_line[3]
+                new_log.append(log[i] + SEPARATOR + active_player_pkm + SEPARATOR + active_rival_pkm)
+                i += 2
+            elif log[i].startswith("PLAYER") and "HP" not in str(log[i]):
+                patron = r"\(.*\)"
+                search = re.search(patron, log[i])
+                if search:
+                    damage = search.group(0)
+                    damage = float(damage.split(", ")[1][:-1]) * 100
+                    # Tengo que reescribir el pkm rival, por lo que busco el siguiente PLAYER con HP
+                    for j in range(i, len(log)):
+                        if log[j].startswith("RIVAL") and "HP" in str(log[j]):
+                            rival_line = log[j].split(" ")
+                            active_rival_pkm = get_pkmID(rival_line[1]) + "," + rival_line[3]
+                            break
+                    new_log.append(log[i] + SEPARATOR + active_player_pkm + SEPARATOR + active_rival_pkm)
+                else:
+                    # No daña
+                    new_log.append(log[i] + SEPARATOR + active_player_pkm + SEPARATOR + active_rival_pkm)
+            elif log[i].startswith("RIVAL") and "HP" not in str(log[i]):
+                patron = r"\(.*\)"
+                search = re.search(patron, log[i])
+                if search:
+                    damage = search.group(0)
+                    damage = float(damage.split(", ")[1][:-1]) * 100
+                    # Tengo que reescribir el pkm del jugador, por lo que busco el siguiente PLAYER con HP
+                    for j in range(i, len(log)):
+                        if log[j].startswith("PLAYER") and "HP" in str(log[j]):
+                            player_line = log[j].split(" ")
+                            active_player_pkm = get_pkmID(player_line[1]) + "," + player_line[3]
+                            break
+                    new_log.append(log[i] + SEPARATOR + active_player_pkm + SEPARATOR + active_rival_pkm)
+                else:
+                    # No daña
+                    new_log.append(log[i] + SEPARATOR + active_player_pkm + SEPARATOR + active_rival_pkm)
+            elif "recovers" in log[i]:
+                new_log.append(log[i] + SEPARATOR + active_player_pkm + SEPARATOR + active_rival_pkm)
+                
+
+        new_logs.append(new_log)
+    return new_logs
+
 def select_direction(route_name: str):
     if route_name in ["PUEBLO PALETA", "RUTA 1", "RUTA 21", "MANSIÓN POKÉMON", "RUTA 5", "RUTA 6", "RUTA 22", "RUTA 23", "CALLE VICTORIA"]:
         return "left"
@@ -149,7 +240,8 @@ def select_direction(route_name: str):
 class MapPanel(QWidget):
     def __init__(self, pkGIFList: list):
         super().__init__()
-
+        self.setMinimumWidth(50)
+        self.setMinimumHeight(50)
         self.setMouseTracking(True)
         # --- Imagen base ---
         self.map_label = QLabel(self)
@@ -262,9 +354,10 @@ class MapPanel(QWidget):
         self.resizeEvent(None)
 
 class CombatPanel(QWidget):
-    def __init__(self, teamsGIFList: list):
+    def __init__(self, teamsPreviewGIFList: list, entire_logs):
         super().__init__()
-
+        self.setMinimumWidth(50)
+        self.setMinimumHeight(50)
         self.setMouseTracking(True)
         # --- Imagen base ---
         self.map_label = QLabel(self)
@@ -273,7 +366,7 @@ class CombatPanel(QWidget):
         self.map_label.setScaledContents(True)
         
         # Lista de equipos del jugador (cada equipo es una lista de GIFs)
-        self.teamsGIFList = teamsGIFList
+        self.teamsPreviewGIFList = teamsPreviewGIFList
         self.current_team_index = 0
         
         # Definir equipos rivales (pkmID)
@@ -299,7 +392,7 @@ class CombatPanel(QWidget):
         for trainer, team_ids in self.rival_teams.items():
             gif_team = []
             for pkm_id in team_ids:
-                gif_path = dataset["pkdex"][str(pkm_id)]["sprite"]["front"]
+                gif_path = str(dataset["pkdex"][str(pkm_id)]["sprite"]["front"]).replace("normalized_sprites", "sprites")
                 gif_team.append(gif_path)
             self.rival_teams_gifs[trainer] = gif_team
         
@@ -325,6 +418,40 @@ class CombatPanel(QWidget):
         self.player_widgets = []
         self.rival_widgets = []
 
+
+        # LOGS
+        # Almacenar los logs completos
+        self.entire_logs = entire_logs
+
+        self.labelLog = QLabel("", self)  # Hacerlo atributo de la clase
+        self.labelLog.setFont(QFont("Arial", 12))
+        self.labelLog.setStyleSheet("color: white; font-weight: bold; background-color: rgba(0, 0, 0, 0.7); padding: 5px;")
+        self.labelLog.setAlignment(Qt.AlignLeft)
+
+        # Label del team preview
+        self.teamPreview =  DualColorLabel("", self)
+        self.teamPreviewText = QLabel("TEAM PREVIEW", self)  # Hacerlo atributo de la clase
+        self.teamPreviewText.setStyleSheet("color: white; font-weight: bold; background-color: rgba(0, 0, 0, 0.6); padding: 5px;")
+        self.teamPreviewText.setAlignment(Qt.AlignCenter)
+
+        # BOTONES
+        self.btnNextTurn = QPushButton("NEXT TURN", self)
+        self.btnPastTurn = QPushButton("PAST TURN", self)
+        self.btnStartBattle = QPushButton("FIRST TURN", self)
+        self.btnEndBattle = QPushButton("LAST TURN", self)
+        
+        # Conectar botones a sus funciones
+        self.btnNextTurn.clicked.connect(self.next_turn)
+        self.btnPastTurn.clicked.connect(self.past_turn)
+        self.btnStartBattle.clicked.connect(self.start_battle)
+        self.btnEndBattle.clicked.connect(self.end_battle)
+        
+        self.btnNextTurn.setStyleSheet(button_style)
+        self.btnPastTurn.setStyleSheet(button_style)
+        self.btnStartBattle.setStyleSheet(button_style)
+        self.btnEndBattle.setStyleSheet(button_style)
+
+
     def resizeEvent(self, event):
         w = self.width()
         h = self.height()
@@ -335,33 +462,94 @@ class CombatPanel(QWidget):
         # Reposicionar los Pokémon de ambos equipos
         self.position_team_widgets(w, h)
 
+        # Reposicionar el label de logs en posición relativa (0.5, 0.8)
+        self.position_log_label(w, h)
+        self.position_buttons(w, h)
+        self.position_team_preview(w, h)
+        self.position_active_pkms(w, h)
+
+    def position_team_preview(self, w, h):
+        """Posiciona el label del team preview en la posición relativa especificada"""
+        # Calcular posición (0.5, 0.8) relativa al tamaño del widget
+        label_width = int(w * 0.25)  # del ancho del widget
+        label_height = int(h * 0.135)  # del alto del widget
+        label_x = int(w * 0.035)
+        label_y = int(h * 0.06)
+        
+        self.teamPreview.resize(label_width, label_height)
+        self.teamPreview.move(label_x, label_y)
+
+        label_width_text = int(label_width * 0.5)
+        label_height_text = int(label_height * 0.25)
+        label_x_text = int(label_x + label_width_text / 2)
+        label_y_text = int(label_y - label_height_text)
+
+        self.teamPreviewText.resize(label_width_text, label_height_text)
+        self.teamPreviewText.move(label_x_text, label_y_text)
+        
+
+
+    def position_log_label(self, w, h):
+        """Posiciona el label de logs en la posición relativa especificada"""
+        # Calcular posición (0.5, 0.8) relativa al tamaño del widget
+        label_width = int(w * 0.93)  # 80% del ancho del widget
+        label_height = int(h * 0.15)  # 10% del alto del widget
+        label_x = int(w * 0.035)  # Centrado: (1 - 0.8) / 2 = 0.1
+        label_y = int(h * 0.825)  # 80% desde la parte superior
+        
+        self.labelLog.resize(label_width, label_height)
+        self.labelLog.move(label_x, label_y)
+
+    def position_buttons(self, w, h):
+        """Posiciona los tres botones a la derecha del label"""
+        button_width = int(w * 0.15)
+        button_height = int(h * 0.07)
+        
+        # Posición base para los botones (a la derecha del label)
+        base_x = int(w * 0.66)  # 0.1 + 0.6 + 0.02 = 0.72
+        base_y = int(h * 0.83)
+        
+        # Posicionar cada botón
+        self.btnPastTurn.resize(button_width, button_height)
+        self.btnPastTurn.move(base_x, base_y)
+        
+        self.btnNextTurn.resize(button_width, button_height)
+        self.btnNextTurn.move(base_x + button_width, base_y)
+
+        self.btnStartBattle.resize(button_width, button_height)
+        self.btnStartBattle.move(base_x, base_y + button_height)
+
+        self.btnEndBattle.resize(button_width, button_height)
+        self.btnEndBattle.move(base_x + button_width, base_y + button_height)
+
     def position_team_widgets(self, w, h):
         """Posiciona los widgets de ambos equipos en el panel"""
         # Calcular tamaño de cada Pokémon
-        widget_size = int(w * 0.2), int(h * 0.3)
+        increment = 0.18
+        widget_size = int(w * 0.2 * increment), int(h * 0.3 * increment)
         
         # Posiciones del jugador: empezar en (0.2w, 0.2h) y bajar en intervalos de 0.1 en y
-        player_base_x = 0.25
-        player_base_y = -0.1
-        y_increment = 0.14
+        player_base_x = 0.04
+        player_base_y = 0.07
+        x_increment = 0.04
         
         # Posicionar Pokémon del jugador (lado izquierdo)
         for i, (widget, movie) in enumerate(self.player_widgets):
-            x = int(w * player_base_x)
-            y = int(h * (player_base_y + (i * y_increment)))
+            x = int(w * (player_base_x + (i * x_increment)))
+            y = int(h * player_base_y)
             
             widget.resize(*widget_size)
             widget.move(x, y)
             movie.setScaledSize(widget.size())
         
         # Posiciones del rival: empezar en (0.8w, 0.2h) y bajar en intervalos de 0.1 en y
-        rival_base_x = 0.45
-        rival_base_y = -0.1
+        rival_base_x = 0.04
+        rival_base_y = 0.135
         
         # Posicionar Pokémon del rival (lado derecho)
         for i, (widget, movie) in enumerate(self.rival_widgets):
-            x = int(w * rival_base_x)
-            y = int(h * (rival_base_y + (i * y_increment)))
+            x = int(w * (rival_base_x + (i * x_increment)))
+            y = int(h * rival_base_y)
             
             widget.resize(*widget_size)
             widget.move(x, y)
@@ -370,7 +558,7 @@ class CombatPanel(QWidget):
     def update_CombatPanel(self, team_index: int, button_text: str = None):
         """Actualiza ambos equipos mostrados según el índice del botón pulsado"""
         # Validar índice del jugador
-        if team_index < 0 or team_index >= len(self.teamsGIFList):
+        if team_index < 0 or team_index >= len(self.teamsPreviewGIFList):
             return
             
         self.current_team_index = team_index
@@ -379,7 +567,7 @@ class CombatPanel(QWidget):
         self.clear_team_widgets()
         
         # Crear nuevos widgets para el equipo del jugador
-        player_team_gifs = self.teamsGIFList[team_index]
+        player_team_gifs = self.teamsPreviewGIFList[team_index]
         for gif_path in player_team_gifs:
             gif_label = QLabel(self)
             movie = QMovie(gif_path)
@@ -403,9 +591,75 @@ class CombatPanel(QWidget):
                     
                     self.rival_widgets.append((gif_label, movie))
         
+        # Actualizar el texto del log según el team_index
+        self.current_team_index = team_index
+        self.current_log_index = 0  # Reiniciar índice del log al cambiar de equipo
+        self.update_log_text()
+        
         # Forzar redibujo y reposicionamiento
         self.update()
         self.resizeEvent(None)
+
+    def update_log_text(self):
+        """Actualiza el texto del label de logs según los índices actuales"""
+        if (hasattr(self, 'entire_logs') and 
+            self.entire_logs and 
+            self.current_team_index < len(self.entire_logs) and 
+            self.entire_logs[self.current_team_index] and
+            self.current_log_index < len(self.entire_logs[self.current_team_index])):
+            
+            # Obtener el log en la posición actual
+            log_text = self.entire_logs[self.current_team_index][self.current_log_index]
+            self.labelLog.setText(log_text)
+        else:
+            self.labelLog.setText("No hay logs disponibles")
+
+    def next_turn(self):
+        """Avanza al siguiente turno (incrementa el índice del log)"""
+        if (hasattr(self, 'entire_logs') and 
+            self.entire_logs and 
+            self.current_team_index < len(self.entire_logs) and 
+            self.entire_logs[self.current_team_index]):
+            
+            logs_for_team = self.entire_logs[self.current_team_index]
+            if self.current_log_index < len(logs_for_team) - 1:
+                self.current_log_index += 1
+                self.update_log_text()
+                self.update_active_pkms()
+
+    def past_turn(self):
+        """Retrocede al turno anterior (decrementa el índice del log)"""
+        if self.current_log_index > 0:
+            self.current_log_index -= 1
+            self.update_log_text()
+            self.update_active_pkms()
+
+    def start_battle(self):
+        """Va al último log del equipo actual"""
+        if (hasattr(self, 'entire_logs') and 
+            self.entire_logs):
+            
+            logs_for_team = self.entire_logs[0]
+            if logs_for_team:
+                self.current_log_index = 0
+                self.update_log_text()
+                self.update_active_pkms()
+
+    def end_battle(self):
+        """Va al último log del equipo actual"""
+        if (hasattr(self, 'entire_logs') and 
+            self.entire_logs and 
+            self.current_team_index < len(self.entire_logs) and 
+            self.entire_logs[self.current_team_index]):
+            
+            logs_for_team = self.entire_logs[self.current_team_index]
+            if logs_for_team:
+                self.current_log_index = len(logs_for_team) - 1
+                self.update_log_text()
+                self.update_active_pkms()
+
+    def update_active_pkms():
+        pass
 
     def clear_team_widgets(self):
         """Elimina todos los widgets de ambos equipos"""
@@ -433,13 +687,15 @@ class App(QWidget):
                 gif_path = dataset["pkdex"][str(pkmID)]["sprite"]["front"]
                 self.pkGIFList.append(gif_path)
 
-        self.teamsGIFList = []
-        for team in individual[1]:
+        self.teamsPreviewGIFList = []
+        # Obtener los equipos evolucionados de los logs (primer log)
+        for log in entire_logs:
+            team_log = log[0][1:-1].split(", ")
             team_trainer = []
-            for pkmID in team:
-                gif_path = dataset["pkdex"][str(pkmID)]["sprite"]["front"]
+            for pkmID in team_log:
+                gif_path = str(dataset["pkdex"][str(pkmID)]["sprite"]["front"]).replace("normalized_sprites", "sprites")
                 team_trainer.append(gif_path)
-            self.teamsGIFList.append(team_trainer)
+            self.teamsPreviewGIFList.append(team_trainer)
 
 
         self.setWindowTitle("Fenotipo")
@@ -567,7 +823,7 @@ class App(QWidget):
         self.map_panel = MapPanel(self.pkGIFList)
 
         # Panel de combates
-        self.combat_panel = CombatPanel(self.teamsGIFList)  # <- tu widget CombatPanel
+        self.combat_panel = CombatPanel(self.teamsPreviewGIFList, prepare_entire_logs(entire_logs))
 
         # Añadir al stack
         self.central_stack.addWidget(self.map_panel)    # index 0
@@ -701,8 +957,11 @@ class App(QWidget):
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
-    (feasibility, fitness_value, entire_logs) = calculate_fitness(INDIVIDUAL_EXAMPLE, dataset=dataset, verbose=False)
-    window = App(INDIVIDUAL_EXAMPLE, feasibility, fitness_value, entire_logs)
+    individual = [[1, 16, 21, 10, 13, 32, 23, 35, 43, 63, 69, 52, 129, 50, 27, 56, 41, 37, 58, 84, 92, 48, 54, 43, 48, 60, 19, 84, 72, 79, 98, 86, 88, 25, 118, 66], [[1, 13, 16, 10, 21], [43, 32, 1, 13, 63, 16], [32, 21, 69, 129, 50, 23], [58, 84, 27, 50, 23, 41], [56, 16, 32, 58, 92, 69], [92, 48, 56, 84, 23, 63], [92, 43, 58, 54, 84, 10], [63, 58, 1, 35, 10, 129], [72, 88, 21, 48, 84, 43], [63, 98, 37, 25, 43, 27], [25, 56, 13, 84, 37, 43], [92, 13, 50, 41, 129, 58], [41, 50, 1, 23, 43, 10], [35, 72, 98, 129, 60, 79]]]
+    # INDIVIDUAL_EXAMPLE
+    individual = generate_individual()
+    (feasibility, fitness_value, entire_logs) = calculate_fitness(individual, dataset=dataset, verbose=True)
+    window = App(individual, feasibility, fitness_value, entire_logs)
     print("FITNESS VALUE")
     print(fitness_value)
     window.show()
