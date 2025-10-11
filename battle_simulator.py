@@ -42,6 +42,21 @@ def load_json_in_dataset():
 def calculate_speed(base: int, level: int):
     return int((((2 * base) + 31)*level)/100 + 5)
 
+def select_level_cap(rival_team:object):
+    '''
+    Returns max level of the rival team
+        rival_team: list of objects
+            - name: str
+            - level: int
+            - ability: str
+            - moves: list
+    '''
+    max_level = 1
+    for pkm in rival_team:
+        if(pkm["level"] > max_level):
+            max_level = pkm["level"]
+    return max_level
+
 def deal_damage(attacker:object, defender:object, move:str):
     '''
     Returns the damage dealt by an attacker to a defender using a move in format % of HP lost
@@ -98,21 +113,6 @@ def select_best_attack(attacker:object, target:object):
         if(lostHP > best_move[1]):
             best_move = (move, lostHP)
     return best_move
-
-def select_level_cap(rival_team:object):
-    '''
-    Returns max level of the rival team
-        rival_team: list of objects
-            - name: str
-            - level: int
-            - ability: str
-            - moves: list
-    '''
-    max_level = 1
-    for pkm in rival_team:
-        if(pkm["level"] > max_level):
-            max_level = pkm["level"]
-    return max_level
 
 def cure_with_drain_move(attacker_name, attack, real_damage, hp, total_damage, drain_attacks, logs, verbose=False):
     move_name = attack[0]
@@ -647,4 +647,39 @@ def approximate_fitness(number_of_battles: 5, individual:list, dataset, verbose:
     return (feasibility, int(fitness_value * (TOTAL_RIVAL_PKM/pkm_defeated)), entire_logs)
 
 
+# Prepare data for use
 dataset = load_json_in_dataset()
+
+keys = TRAINERS.keys()
+
+rival_teams = []
+for key in keys:
+    if key.startswith("RIVAL"):
+        rival_teams.append(TRAINERS[key]["1"])
+        rival_teams.append(TRAINERS[key]["4"])
+        rival_teams.append(TRAINERS[key]["7"])
+    else:
+        rival_teams.append(TRAINERS[key])
+
+
+DAMAGES_DICTIONARY = {}
+
+for rival_team in rival_teams:
+    level_cap = select_level_cap(rival_team)
+    # Rival pkm vs all pkdex
+    for rival_pkm in rival_team:
+        attacker = {
+            "species": rival_pkm["species"],
+            "level": rival_pkm["level"],
+            "ability": rival_pkm["ability"],
+            "moves": rival_pkm["moves"]
+        }
+        
+        for pkm_key, pkm_value in dataset["pkdex"].items():
+            defender = {
+                "species": pkm_value["name"],
+                "level": level_cap,
+                "ability": pkm_value["abilities"]
+            }
+            key = attacker["species"] + "|" + str(attacker["level"]) + "|" + defender["species"] + "|" + str(defender["level"])
+            DAMAGES_DICTIONARY[key] = select_best_attack(attacker=attacker, target=defender)

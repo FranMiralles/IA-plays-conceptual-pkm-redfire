@@ -15,7 +15,7 @@ def guardar_json(datos, nombre_archivo):
 
 def save_moves():
     moves = {}
-    banned_moves = ["dream-eater", "horn-drill", "guillotine", "fissure"]
+    banned_moves = ["dream-eater", "horn-drill", "guillotine", "fissure", "skull-bash"]
     for i in range(1, 400):
         print(f"Obteniendo datos del movimiento {i}...")
         res = requests.get(f"https://pokeapi.co/api/v2/move/{i}")
