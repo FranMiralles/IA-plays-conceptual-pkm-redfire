@@ -1,8 +1,8 @@
 import base64
 import sys
 from PyQt5.QtWidgets import QApplication, QLabel, QWidget, QHBoxLayout, QVBoxLayout, QPushButton, QStackedWidget
-from PyQt5.QtGui import QPixmap, QMovie, QFont, QPainter, QColor
-from PyQt5.QtCore import Qt
+from PyQt5.QtGui import QPixmap, QMovie, QFont, QPainter, QColor, QPainterPath
+from PyQt5.QtCore import Qt, QRectF
 import requests
 from io import BytesIO
 from tempfile import NamedTemporaryFile
@@ -41,11 +41,11 @@ STYLE_SHEET = """
                 background-color: #34495e;
                 color: #ecf0f1;
                 border: none;
-                border-radius: 6px;
-                padding: 12px 15px;
+                border-radius: 10px;
+                padding: 6px 12px;
                 font-weight: bold;
-                text-align: left;
-                margin: 2px;
+                text-align: right;
+                margin: 0px;
             }
             
             QPushButton#main_btn:hover {
@@ -64,8 +64,8 @@ STYLE_SHEET = """
                 background-color: #2c3e50;
                 color: #bdc3c7;
                 border: none;
-                border-radius: 4px;
-                padding: 10px 12px;
+                border-radius: 10px;
+                padding: 6px 12px;
                 text-align: left;
                 margin: 1px;
             }
@@ -79,7 +79,7 @@ STYLE_SHEET = """
                 background-color: #e74c3c;
                 color: white;
                 font-weight: bold;
-                border-left: 3px solid #c0392b;
+                border-left: 4px solid #c0392b;
             }
             
             /* Efectos generales para botones */
@@ -95,7 +95,7 @@ button_style = """
         color: white;
         font-weight: bold;
         border: 2px solid white;
-        border-radius: 5px;
+        border-radius: 10px;
         padding: 5px;
     }
     QPushButton:hover {
@@ -160,12 +160,21 @@ ROUTE_NAMES = [
 class DualColorLabel(QLabel):
     def paintEvent(self, event):
         painter = QPainter(self)
-        
+        painter.setRenderHint(QPainter.Antialiasing)  # bordes suaves
+
+        # Crear una ruta con bordes redondeados
+        path = QPainterPath()
+        path.addRoundedRect(QRectF(self.rect()), 10, 10)
+        painter.setClipPath(path)  # recorta el área al radio
+
         # Mitad superior - Color 1
         painter.fillRect(0, 0, self.width(), self.height() // 2, QColor(0, 0, 255, 65))
-        
-        # Mitad inferior - Color 2  
+
+        # Mitad inferior - Color 2
         painter.fillRect(0, self.height() // 2, self.width(), self.height() // 2, QColor(255, 0, 0, 65))
+
+        # Dibuja el texto del QLabel normalmente
+        super().paintEvent(event)
         
 SEPARATOR = " : "
 def prepare_entire_logs(entire_logs):
@@ -354,7 +363,7 @@ class MapPanel(QWidget):
         self.resizeEvent(None)
 
 class CombatPanel(QWidget):
-    def __init__(self, teamsPreviewGIFList: list, entire_logs):
+    def __init__(self, teamsPreviewGIFList: list, entire_logs, starterID):
         super().__init__()
         self.setMinimumWidth(50)
         self.setMinimumHeight(50)
@@ -371,20 +380,27 @@ class CombatPanel(QWidget):
         
         # Definir equipos rivales (pkmID)
         self.rival_teams = {
+            "RIVAL_RUTA_22": [16, 4] if starterID == 1 else [16, 7] if starterID == 4 else [16, 1],
             "GYM_PLATEADA": [74, 95],
+            "RIVAL_CELESTE": [17, 19, 4] if starterID == 1 else [17, 19, 7] if starterID == 4 else [17, 19, 1],
             "GYM_CELESTE": [120, 121],
+            "RIVAL_CARMIN": [17, 20, 64, 5] if starterID == 1 else [17, 20, 64, 8] if starterID == 4 else [17, 20, 64, 2],
             "GYM_CARMIN": [100, 25, 26],
+            "RIVAL_TORRE_PKM": [17, 102, 130, 64, 5] if starterID == 1 else [17, 58, 102, 64, 8] if starterID == 4 else [17, 130, 58, 64, 2],
             "GYM_AZULONA": [71, 114, 45],
             "GIOVANNI_AZULONA": [95, 111, 115],
+            "RIVAL_AZAFRAN": [18, 102, 130, 65, 6] if starterID == 1 else [18, 58, 102, 65, 9] if starterID == 4 else [18, 130, 58, 65, 3],
             "GIOVANNI_AZAFRAN": [33, 111, 115, 31],
             "GYM_FUCSIA": [109, 109, 89, 110],
             "GYM_AZAFRAN": [64, 49, 122, 65],
             "GYM_CANELA": [58, 77, 78, 59],
             "GYM_VERDE": [111, 51, 34, 31, 111],
+            "RIVAL_VERDE": [18, 111, 102, 130, 65, 6] if starterID == 1 else [18, 111, 58, 102, 65, 9] if starterID == 4 else [18, 111, 130, 58, 65, 3],
             "ALTO_MANDO_LORELEI": [87, 91, 80, 124, 131],
             "ALTO_MANDO_BRUNO": [95, 107, 106, 95, 68],
             "ALTO_MANDO_AGATHA": [94, 42, 93, 24, 94],
-            "ALTO_MANDO_LANCE": [130, 148, 148, 142, 149]
+            "ALTO_MANDO_LANCE": [130, 148, 148, 142, 149],
+            "RIVAL_CAMPEON": [18, 112, 65, 103, 130, 6] if starterID == 1 else [18, 112, 65, 59, 103, 9] if starterID == 4 else [18, 112, 65, 130, 59, 3]
         }
         
         # Convertir IDs rivales a GIFs
@@ -398,20 +414,27 @@ class CombatPanel(QWidget):
         
         # Mapeo de nombres de botones a claves de equipos rivales
         self.button_to_rival_key = {
+            "RIVAL RUTA 22": "RIVAL_RUTA_22",
             "GYM PLATEADA": "GYM_PLATEADA",
+            "RIVAL CELESTE": "RIVAL_CELESTE",
             "GYM CELESTE": "GYM_CELESTE", 
+            "RIVAL CARMIN": "RIVAL_CARMIN",
             "GYM CARMIN": "GYM_CARMIN",
+            "RIVAL TORRE PKM": "RIVAL_TORRE_PKM",
             "GYM AZULONA": "GYM_AZULONA",
             "GIOVANNI AZULONA": "GIOVANNI_AZULONA",
+            "RIVAL AZAFRAN": "RIVAL_AZAFRAN",
             "GIOVANNI AZAFRAN": "GIOVANNI_AZAFRAN",
             "GYM FUCSIA": "GYM_FUCSIA",
             "GYM AZAFRAN": "GYM_AZAFRAN",
             "GYM CANELA": "GYM_CANELA",
             "GYM VERDE": "GYM_VERDE",
+            "RIVAL VERDE": "RIVAL_VERDE",
             "ALTO MANDO LORELEI": "ALTO_MANDO_LORELEI",
             "ALTO MANDO BRUNO": "ALTO_MANDO_BRUNO",
             "ALTO MANDO AGATHA": "ALTO_MANDO_AGATHA",
-            "ALTO MANDO LANCE": "ALTO_MANDO_LANCE"
+            "ALTO MANDO LANCE": "ALTO_MANDO_LANCE",
+            "RIVAL CAMPEON": "RIVAL_CAMPEON"
         }
         
         # Listas para almacenar los widgets de Pokémon
@@ -425,13 +448,13 @@ class CombatPanel(QWidget):
 
         self.labelLog = QLabel("", self)  # Hacerlo atributo de la clase
         self.labelLog.setFont(QFont("Arial", 12))
-        self.labelLog.setStyleSheet("color: white; font-weight: bold; background-color: rgba(0, 0, 0, 0.7); padding: 5px;")
+        self.labelLog.setStyleSheet("color: white; font-weight: bold; background-color: rgba(0, 0, 0, 0.7); padding: 5px; border-radius: 10px;")
         self.labelLog.setAlignment(Qt.AlignLeft)
 
         # Label del team preview
         self.teamPreview =  DualColorLabel("", self)
         self.teamPreviewText = QLabel("TEAM PREVIEW", self)  # Hacerlo atributo de la clase
-        self.teamPreviewText.setStyleSheet("color: white; font-weight: bold; background-color: rgba(0, 0, 0, 0.6); padding: 5px;")
+        self.teamPreviewText.setStyleSheet("color: white; font-weight: bold; background-color: rgba(0, 0, 0, 0.6); padding: 5px; border-top-left-radius: 10px; border-top-right-radius: 10px;")
         self.teamPreviewText.setAlignment(Qt.AlignCenter)
 
         # BOTONES
@@ -452,6 +475,39 @@ class CombatPanel(QWidget):
         self.btnEndBattle.setStyleSheet(button_style)
 
 
+        # Pkm activos
+        self.team_active_pkmID = 1
+        self.rival_active_pkmID = 1
+        self.team_active_pkmLabel = QLabel(self)
+        self.rival_active_pkmLabel = QLabel(self)
+        self.team_active_pkmHP = QLabel("100% HP", self)
+        self.team_active_pkmHP.setStyleSheet("""
+            color: #FFD700;  /* Dorado */
+            font-weight: bold;
+            font-size: 12px;
+            font-family: 'Arial Black', sans-serif;
+            background-color: rgba(139, 0, 0, 0.6);  /* Rojo oscuro */
+            border: 1px solid #FFD700;
+            border-radius: 10px;
+            padding: 6px 12px;
+            text-align: right;
+        """)
+        
+        self.rival_active_pkmHP = QLabel("100% HP", self)
+        self.rival_active_pkmHP.setStyleSheet("""
+            color: #FFD700;  /* Dorado */
+            font-weight: bold;
+            font-size: 12px;
+            font-family: 'Arial Black', sans-serif;
+            background-color: rgba(139, 0, 0, 0.6);  /* Rojo oscuro */
+            border: 1px solid #FFD700;
+            border-radius: 10px;
+            padding: 6px 12px;
+            text-align: right;
+        """)
+        
+
+
     def resizeEvent(self, event):
         w = self.width()
         h = self.height()
@@ -467,6 +523,42 @@ class CombatPanel(QWidget):
         self.position_buttons(w, h)
         self.position_team_preview(w, h)
         self.position_active_pkms(w, h)
+
+    def position_active_pkms(self, w, h):
+        # Obtener los paths del pkm ID
+        self.team_active_pkmID_path = dataset["pkdex"][str(self.team_active_pkmID)]["sprite"]["back"]
+        self.rival_active_pkmID_path = dataset["pkdex"][str(self.rival_active_pkmID)]["sprite"]["front"]
+        # Asignar tamaño relativo a la ventana
+        increment = 0.5
+        widget_size = int(w * increment), int(h * increment)
+        # Instanciar los labels
+        # Active TEAM
+        pos_x_active = 0.05
+        pos_y_active = 0.25
+        
+        movie = QMovie(self.team_active_pkmID_path)
+        self.team_active_pkmLabel.setMovie(movie)
+        movie.start()
+        x = int(w * pos_x_active)
+        y = int(h * pos_y_active)
+        self.team_active_pkmLabel.resize(*widget_size)
+        self.team_active_pkmLabel.move(x, y)
+        movie.setScaledSize(self.team_active_pkmLabel.size())
+        self.team_active_pkmHP.move(int(w * 0.46), int(h * 0.65))
+        # Active Rival
+        pos_x_active = 0.4
+        pos_y_active = -0.05
+        movie = QMovie(self.rival_active_pkmID_path)
+        self.rival_active_pkmLabel.setMovie(movie)
+        movie.start()
+        x = int(w * pos_x_active)
+        y = int(h * pos_y_active)
+        self.rival_active_pkmLabel.resize(*widget_size)
+        self.rival_active_pkmLabel.move(x, y)
+        movie.setScaledSize(self.rival_active_pkmLabel.size())
+        self.rival_active_pkmHP.move(int(w * 0.81), int(h * 0.35))
+        
+
 
     def position_team_preview(self, w, h):
         """Posiciona el label del team preview en la posición relativa especificada"""
@@ -499,6 +591,7 @@ class CombatPanel(QWidget):
         
         self.labelLog.resize(label_width, label_height)
         self.labelLog.move(label_x, label_y)
+        
 
     def position_buttons(self, w, h):
         """Posiciona los tres botones a la derecha del label"""
@@ -610,9 +703,14 @@ class CombatPanel(QWidget):
             
             # Obtener el log en la posición actual
             log_text = self.entire_logs[self.current_team_index][self.current_log_index]
-            self.labelLog.setText(log_text)
-        else:
-            self.labelLog.setText("No hay logs disponibles")
+            log_text = log_text.split(" : ")
+            log_formated = re.sub(r'PLAYER |RIVAL|\(|\)|, |\'|\d+\.\d+', '', str(log_text[0])).strip()
+            self.labelLog.setText(log_formated)
+            self.team_active_pkmID = log_text[1].split(",")[0]
+            self.team_active_pkmHP.setText(log_text[1].split(",")[1] + "% HP")
+            self.rival_active_pkmID = log_text[2].split(",")[0]
+            self.rival_active_pkmHP.setText(log_text[2].split(",")[1] + "% HP")
+            
 
     def next_turn(self):
         """Avanza al siguiente turno (incrementa el índice del log)"""
@@ -658,8 +756,18 @@ class CombatPanel(QWidget):
                 self.update_log_text()
                 self.update_active_pkms()
 
-    def update_active_pkms():
-        pass
+    def update_active_pkms(self):
+        self.team_active_pkmID_path = dataset["pkdex"][str(self.team_active_pkmID)]["sprite"]["back"]
+        self.rival_active_pkmID_path = dataset["pkdex"][str(self.rival_active_pkmID)]["sprite"]["front"]
+        movie = QMovie(self.team_active_pkmID_path)
+        self.team_active_pkmLabel.setMovie(movie)
+        movie.start()
+        movie = QMovie(self.rival_active_pkmID_path)
+        self.rival_active_pkmLabel.setMovie(movie)
+        movie.start()
+        # Forzar redibujo y reposicionamiento
+        self.update()
+        self.resizeEvent(None)
 
     def clear_team_widgets(self):
         """Elimina todos los widgets de ambos equipos"""
@@ -677,6 +785,8 @@ class CombatPanel(QWidget):
 
 class App(QWidget):
     def __init__(self, individual, feasibility, fitness_value, entire_logs):
+        # Preparar el individuo con un equipo por cada combate en la liga
+        individual[1] = individual[1] + [individual[1][-1]] * 4
         super().__init__()
 
         self.pkGIFList = []
@@ -772,9 +882,9 @@ class App(QWidget):
         submenu_map.setObjectName("submenu_map")
         
         map_buttons = [
-            "MAPA COMPLETO", "GYM PLATEADA", "GYM CELESTE", "GYM CARMIN", "GYM AZULONA",
-            "GIOVANNI AZULONA", "GIOVANNI AZAFRAN", "GYM FUCSIA", "GYM AZAFRAN",
-            "GYM CANELA", "GYM VERDE", "LIGA POKÉMON"
+            "MAPA COMPLETO", "RIVAL RUTA 22", "GYM PLATEADA", "RIVAL CELESTE", "GYM CELESTE", "RIVAL CARMIN", "GYM CARMIN", "RIVAL TORRE PKM", "GYM AZULONA",
+            "GIOVANNI AZULONA", "RIVAL AZAFRAN", "GIOVANNI AZAFRAN", "GYM FUCSIA", "GYM AZAFRAN",
+            "GYM CANELA", "GYM VERDE", "RIVAL VERDE", "LIGA POKÉMON"
         ]
         
         for name in map_buttons:
@@ -796,10 +906,10 @@ class App(QWidget):
         submenu_combat.setObjectName("submenu_combat")
         
         combat_buttons = [
-            "GYM PLATEADA", "GYM CELESTE", "GYM CARMIN", "GYM AZULONA",
-            "GIOVANNI AZULONA", "GIOVANNI AZAFRAN", "GYM FUCSIA", "GYM AZAFRAN",
-            "GYM CANELA", "GYM VERDE", "ALTO MANDO LORELEI", "ALTO MANDO BRUNO",
-            "ALTO MANDO AGATHA", "ALTO MANDO LANCE"
+            "RIVAL RUTA 22", "GYM PLATEADA", "RIVAL CELESTE", "GYM CELESTE", "RIVAL CARMIN", "GYM CARMIN", "RIVAL TORRE PKM", "GYM AZULONA",
+            "GIOVANNI AZULONA", "RIVAL AZAFRAN", "GIOVANNI AZAFRAN", "GYM FUCSIA", "GYM AZAFRAN",
+            "GYM CANELA", "GYM VERDE", "RIVAL VERDE", "ALTO MANDO LORELEI", "ALTO MANDO BRUNO",
+            "ALTO MANDO AGATHA", "ALTO MANDO LANCE", "RIVAL CAMPEON"
         ]
         
         for name in combat_buttons:
@@ -816,14 +926,14 @@ class App(QWidget):
         self.submenu_stack.addWidget(submenu_map)      # index 0
         self.submenu_stack.addWidget(submenu_combat)   # index 1
 
-        # PANEL CENTRAL (StackedWidget con MapPanel y CombatPanel)
+        # PANEL CENTRAL
         self.central_stack = QStackedWidget()
 
         # Panel de mapas
         self.map_panel = MapPanel(self.pkGIFList)
 
         # Panel de combates
-        self.combat_panel = CombatPanel(self.teamsPreviewGIFList, prepare_entire_logs(entire_logs))
+        self.combat_panel = CombatPanel(self.teamsPreviewGIFList, prepare_entire_logs(entire_logs), starterID=individual[1][0])
 
         # Añadir al stack
         self.central_stack.addWidget(self.map_panel)    # index 0
@@ -941,10 +1051,10 @@ class App(QWidget):
         
         # Obtener el índice del botón pulsado en la lista de combates
         combat_buttons = [
-            "GYM PLATEADA", "GYM CELESTE", "GYM CARMIN", "GYM AZULONA",
-            "GIOVANNI AZULONA", "GIOVANNI AZAFRAN", "GYM FUCSIA", "GYM AZAFRAN",
-            "GYM CANELA", "GYM VERDE", "ALTO MANDO LORELEI", "ALTO MANDO BRUNO",
-            "ALTO MANDO AGATHA", "ALTO MANDO LANCE"
+            "RIVAL RUTA 22", "GYM PLATEADA", "RIVAL CELESTE", "GYM CELESTE", "RIVAL CARMIN", "GYM CARMIN", "RIVAL TORRE PKM", "GYM AZULONA",
+            "GIOVANNI AZULONA", "RIVAL AZAFRAN", "GIOVANNI AZAFRAN", "GYM FUCSIA", "GYM AZAFRAN",
+            "GYM CANELA", "GYM VERDE", "RIVAL VERDE", "ALTO MANDO LORELEI", "ALTO MANDO BRUNO",
+            "ALTO MANDO AGATHA", "ALTO MANDO LANCE", "RIVAL CAMPEON"
         ]
         
         # Encontrar el índice del botón en la lista
@@ -957,12 +1067,8 @@ class App(QWidget):
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
-    individual = [[1, 16, 21, 10, 13, 32, 23, 35, 43, 63, 69, 52, 129, 50, 27, 56, 41, 37, 58, 84, 92, 48, 54, 43, 48, 60, 19, 84, 72, 79, 98, 86, 88, 25, 118, 66], [[1, 13, 16, 10, 21], [43, 32, 1, 13, 63, 16], [32, 21, 69, 129, 50, 23], [58, 84, 27, 50, 23, 41], [56, 16, 32, 58, 92, 69], [92, 48, 56, 84, 23, 63], [92, 43, 58, 54, 84, 10], [63, 58, 1, 35, 10, 129], [72, 88, 21, 48, 84, 43], [63, 98, 37, 25, 43, 27], [25, 56, 13, 84, 37, 43], [92, 13, 50, 41, 129, 58], [41, 50, 1, 23, 43, 10], [35, 72, 98, 129, 60, 79]]]
-    # INDIVIDUAL_EXAMPLE
     individual = generate_individual()
-    (feasibility, fitness_value, entire_logs) = calculate_fitness(individual, dataset=dataset, verbose=True)
+    (feasibility, fitness_value, entire_logs) = calculate_fitness(individual, dataset=dataset, verbose=False)
     window = App(individual, feasibility, fitness_value, entire_logs)
-    print("FITNESS VALUE")
-    print(fitness_value)
     window.show()
     sys.exit(app.exec_())

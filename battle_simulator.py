@@ -84,6 +84,8 @@ def select_best_attack(attacker:object, target:object):
                     - level: int
     '''
     best_move = ("", float('-inf'))
+    if len(attacker["moves"]) == 0:
+        attacker["moves"] = ["tackle"]
     for move in attacker["moves"]:
         lostHP = deal_damage(
             {
@@ -301,7 +303,7 @@ def simulate_battle(team: list, rival_team: list, available_mt: list, available_
                 logs.append("PLAYER " + activePkm["species"] + " hid underwater!")
                 rival_damage = 0
             else:
-                logs.append("PLAYER " + activePkm["species"] + " attacks with " + str(activePkm_attack))
+                logs.append("PLAYER " + activePkm["species"] + " attacks with " + str(activePkm_attack) + "!")
 
             # Rival is inmune if has used in the last turn an inmune attack
             if rival_turns_using_dig == 2:
@@ -362,7 +364,7 @@ def simulate_battle(team: list, rival_team: list, available_mt: list, available_
                 elif rival_turns_using_dive == 1:
                     logs.append("RIVAL " + rival_team[rival_selected_pos]["species"] + " hid underwater!")
                 else:
-                    logs.append("RIVAL " + rival_team[rival_selected_pos]["species"] + " attacks with " + str(activePkm_rival_attack))
+                    logs.append("RIVAL " + rival_team[rival_selected_pos]["species"] + " attacks with " + str(activePkm_rival_attack) + "!")
 
                 if active_HP <= rival_damage:
                     real_damage = active_HP
@@ -423,7 +425,7 @@ def simulate_battle(team: list, rival_team: list, available_mt: list, available_
                 logs.append("RIVAL " + rival_team[rival_selected_pos]["species"] + " hid underwater!")
                 player_damage = 0
             else:
-                logs.append("RIVAL " + rival_team[rival_selected_pos]["species"] + " attacks with " + str(activePkm_rival_attack))
+                logs.append("RIVAL " + rival_team[rival_selected_pos]["species"] + " attacks with " + str(activePkm_rival_attack) + "!")
 
             # Player is inmune if has used in the last turn an inmune attack
             if player_turns_using_dig == 2:
@@ -481,7 +483,7 @@ def simulate_battle(team: list, rival_team: list, available_mt: list, available_
                 elif player_turns_using_dive == 1:
                     logs.append("PLAYER " + activePkm["species"] + " hid underwater!")
                 else:
-                    logs.append("PLAYER " + activePkm["species"] + " attacks with " + str(activePkm_attack))
+                    logs.append("PLAYER " + activePkm["species"] + " attacks with " + str(activePkm_attack) + "!")
 
                 if active_rival_HP <= player_damage:
                     real_damage = active_rival_HP
@@ -574,16 +576,23 @@ def calculate_fitness(individual:list, dataset, verbose: bool):
     entire_logs = []
 
     teams = individual[1]
+    # Añadimos los equipos iguales para la liga pokémon
+    teams = teams + [teams[-1]] * 4
     for i in range(0, len(teams)):
         pkm_catched_previously = pkm_catched[:PREVIOUS_ROUTES_TO_TRAINER[TRAINERS_ORDER[i]]]
         # Comprobar que el equipo utilizado ha sido atrapado, sino penalizar con + INF y dejar de calcular
         for pkm in teams[i]:
             if(pkm not in pkm_catched_previously):
                 return (False, float('inf'), entire_logs)
-       
+            
+        if i == 0 or i == 2 or i == 4 or i == 6 or i == 9 or i == 15 or i == 20: 
+            rival_team = TRAINERS[TRAINERS_ORDER[i]][str(pkm_catched[0])]
+        else:
+            rival_team = TRAINERS[TRAINERS_ORDER[i]]
+
         (player_wins, damage_team, logs) = simulate_battle(
                 team=teams[i], 
-                rival_team=TRAINERS[TRAINERS_ORDER[i]], 
+                rival_team=rival_team, 
                 available_mt=AVAILABLE_MT_TRAINERS[TRAINERS_ORDER[i]],
                 available_ev_obj=AVAILABLE_EVOLVE_OBJ_TRAINERS[TRAINERS_ORDER[i]], 
                 dataset=dataset, 

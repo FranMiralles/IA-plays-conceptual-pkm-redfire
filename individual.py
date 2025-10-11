@@ -24,9 +24,9 @@ def generate_individual():
 
         catches.append(chosen)
 
-    # Generate 14 teams from catches
+    # Generate 17 teams from catches
     teams = []
-    for i in range(0, 14):
+    for i in range(0, 17):
         available =  [pkmID for pkmID in catches[:PREVIOUS_ROUTES_TO_TRAINER[TRAINERS_ORDER[i]]] if pkmID is not None]
         teams.append(random.sample(available, min(6, len(available))))
 
@@ -36,3 +36,5 @@ def generate_individual():
     ]
 
 INDIVIDUAL_EXAMPLE = generate_individual()
+
+calculate_fitness(INDIVIDUAL_EXAMPLE, dataset=dataset, verbose=True)

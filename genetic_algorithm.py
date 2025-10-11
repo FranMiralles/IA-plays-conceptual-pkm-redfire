@@ -295,6 +295,7 @@ if __name__ == "__main__":
     print("Ejecución completada")
 
 
+'''
 (pasa, value, logs)=calculate_fitness(
 
 
@@ -324,5 +325,7 @@ if __name__ == "__main__":
 #for log in logs:
 #    print(logs)
 print(value)
+
+'''
 
 
