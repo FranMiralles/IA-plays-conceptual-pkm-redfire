@@ -1,14 +1,9 @@
-import base64
 import sys
 from PyQt5.QtWidgets import QApplication, QLabel, QWidget, QHBoxLayout, QVBoxLayout, QPushButton, QStackedWidget
 from PyQt5.QtGui import QPixmap, QMovie, QFont, QPainter, QColor, QPainterPath
 from PyQt5.QtCore import Qt, QRectF
-import requests
-from io import BytesIO
-from tempfile import NamedTemporaryFile
 from battle_simulator import *
-from individual import INDIVIDUAL_EXAMPLE
-from route_data.trainers import PREVIOUS_ROUTES_TO_TRAINER, TRAINERS_ORDER
+from route_data.trainers import PREVIOUS_ROUTES_TO_TRAINER
 from genetic_operators import *
 import re
 
@@ -377,7 +372,6 @@ class CombatPanel(QWidget):
         # Lista de equipos del jugador (cada equipo es una lista de GIFs)
         self.teamsPreviewGIFList = teamsPreviewGIFList
         self.current_team_index = 0
-        
         # Definir equipos rivales (pkmID)
         self.rival_teams = {
             "RIVAL_RUTA_22": [16, 4] if starterID == 1 else [16, 7] if starterID == 4 else [16, 1],
@@ -933,7 +927,7 @@ class App(QWidget):
         self.map_panel = MapPanel(self.pkGIFList)
 
         # Panel de combates
-        self.combat_panel = CombatPanel(self.teamsPreviewGIFList, prepare_entire_logs(entire_logs), starterID=individual[1][0])
+        self.combat_panel = CombatPanel(self.teamsPreviewGIFList, prepare_entire_logs(entire_logs), starterID=individual[0][0])
 
         # Añadir al stack
         self.central_stack.addWidget(self.map_panel)    # index 0

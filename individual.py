@@ -1,3 +1,4 @@
+from time import time
 from route_data.routes import ROUTES, ROUTES_ORDER
 from route_data.trainers import TRAINERS, TRAINERS_ORDER, PREVIOUS_ROUTES_TO_TRAINER
 import random
@@ -34,7 +35,3 @@ def generate_individual():
         catches,
         teams
     ]
-
-INDIVIDUAL_EXAMPLE = generate_individual()
-
-calculate_fitness(INDIVIDUAL_EXAMPLE, dataset=dataset, verbose=True)

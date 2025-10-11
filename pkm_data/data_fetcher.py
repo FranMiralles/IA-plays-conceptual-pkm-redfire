@@ -282,33 +282,34 @@ def normalize_sprites():
                 )
                 print(f"Procesado: {file}")
 
-while True:
-    print("Script para obtener datos de la POKE API")
-    print("Qué datos quieres guardar?")
-    print("1. Pokédex 1-151 pokémon")
-    print("2. Sprites animados")
-    print("3. Normalizar sprites")
-    print("4. Movimientos")
-    print("5. Evoluciones")
-    print("6. Exit")
+if __name__ == "__main__":
+    while True:
+        print("Script para obtener datos de la POKE API")
+        print("Qué datos quieres guardar?")
+        print("1. Pokédex 1-151 pokémon")
+        print("2. Sprites animados")
+        print("3. Normalizar sprites")
+        print("4. Movimientos")
+        print("5. Evoluciones")
+        print("6. Exit")
 
-    option = input("Selecciona una opción: ")
-    if option != "1" and option != "2" and option != "3" and option != "4" and option != "5" and option != "6":
-        print("Opción no válida")
-        exit()
+        option = input("Selecciona una opción: ")
+        if option != "1" and option != "2" and option != "3" and option != "4" and option != "5" and option != "6":
+            print("Opción no válida")
+            exit()
 
-    option = int(option)
+        option = int(option)
 
-    if option == 1:
-        save_pokedex()
-    elif option == 2:
-        save_sprites()
-    elif option == 3:
-        normalize_sprites()
-    elif option == 4:
-        save_moves()
-    elif option == 5:
-        save_evolutions()
-    elif option == 6:
-        print("Saliendo del menú")
-        exit()
+        if option == 1:
+            save_pokedex()
+        elif option == 2:
+            save_sprites()
+        elif option == 3:
+            normalize_sprites()
+        elif option == 4:
+            save_moves()
+        elif option == 5:
+            save_evolutions()
+        elif option == 6:
+            print("Saliendo del menú")
+            exit()

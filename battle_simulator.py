@@ -2,11 +2,9 @@ import requests
 import statistics
 import json
 from route_data.trainers import TOTAL_RIVAL_PKM, TRAINERS, TRAINERS_ORDER, PREVIOUS_ROUTES_TO_TRAINER
-from route_data.routes import ROUTES_ORDER
 from route_data.mt_moves import AVAILABLE_MT_TRAINERS
 from route_data.evolve_obj import AVAILABLE_EVOLVE_OBJ_TRAINERS
-import time
-import math
+from pkm_data.data_fetcher import guardar_json
 import random
 
 # In this version, in pkm battles the individuals only choose the team used in a gym. Attacks used are selected among the possible ones maximizing damage dealt to the rival's pkm. Also, current pkm cannot switch so the current pkm steals being the current one until the battle finishes or the pkm is dead.
@@ -33,11 +31,49 @@ def load_json_in_dataset():
     evolutions = cargar_json("./pkm_data/evolutions.json")
     moves = cargar_json("./pkm_data/moves_priority.json")
     pkdex = cargar_json("./pkm_data/pkdex.json")
+    damage_dictionary = cargar_json("./pkm_data/damage_dictionary.json")
     dataset["evolutions"] = evolutions
     dataset["moves"] = moves
     dataset["pkdex"] = pkdex
-            
+    dataset["damage_dictionary"] = damage_dictionary
+
     return dataset
+
+def start_damage_dictionary():
+    '''
+    Initializes the damage dictionary with all rival pkm vs all pokedex pkm
+    '''
+    keys = TRAINERS.keys()
+    rival_teams = []
+    for key in keys:
+        if key.startswith("RIVAL"):
+            rival_teams.append(TRAINERS[key]["1"])
+            rival_teams.append(TRAINERS[key]["4"])
+            rival_teams.append(TRAINERS[key]["7"])
+        else:
+            rival_teams.append(TRAINERS[key])
+    damages_dictionary = {}
+    for rival_team in rival_teams:
+        level_cap = select_level_cap(rival_team)
+        # Rival pkm vs all pkdex
+        for rival_pkm in rival_team:
+            attacker = {
+                "species": rival_pkm["species"],
+                "level": rival_pkm["level"],
+                "ability": rival_pkm["ability"],
+                "moves": rival_pkm["moves"]
+            }
+            for _, pkm_value in dataset["pkdex"].items():
+                defender = {
+                    "species": pkm_value["name"],
+                    "level": level_cap,
+                    "ability": pkm_value["abilities"]
+                }
+                key = attacker["species"] + "|" + str(attacker["level"]) + "|" + defender["species"] + "|" + str(defender["level"])
+                damages_dictionary[key] = select_best_attack(attacker=attacker, target=defender)
+
+    guardar_json(damages_dictionary, "./pkm_data/damage_dictionary.json")
+    return damages_dictionary
 
 def calculate_speed(base: int, level: int):
     return int((((2 * base) + 31)*level)/100 + 5)
@@ -216,9 +252,21 @@ def simulate_battle(team: list, rival_team: list, available_mt: list, available_
         logs.append("PLAYER " + activePkm["species"] + " HP " + str(active_HP))
         logs.append("RIVAL " + rival_team[rival_selected_pos]["species"] + " HP " + str(active_rival_HP))
         
-        # Choose which move selects each pkm
-        activePkm_attack = select_best_attack(activePkm, rival_team[rival_selected_pos])
-        activePkm_rival_attack = select_best_attack(rival_team[rival_selected_pos], activePkm)
+        # Choose which move selects each pkm, if it does not exist in the damage dictionary, calculate it and add it
+        key = activePkm["species"] + "|" + str(activePkm["level"]) + "|" + rival_team[rival_selected_pos]["species"] + "|" + str(rival_team[rival_selected_pos]["level"])
+        if key in dataset["damage_dictionary"]:
+            activePkm_attack = dataset["damage_dictionary"][key]
+        else:
+            print("KEY NO ENCONTRADA:", key)
+            activePkm_attack = select_best_attack(activePkm, rival_team[rival_selected_pos])
+            dataset["damage_dictionary"][key] = activePkm_attack
+        key = rival_team[rival_selected_pos]["species"] + "|" + str(rival_team[rival_selected_pos]["level"]) + "|" + activePkm["species"] + "|" + str(activePkm["level"])
+        if key in dataset["damage_dictionary"]:
+            activePkm_rival_attack = dataset["damage_dictionary"][key]
+        else:
+            print("KEY NO ENCONTRADA:", key)
+            activePkm_rival_attack = select_best_attack(rival_team[rival_selected_pos], activePkm)
+            dataset["damage_dictionary"][key] = activePkm_rival_attack
 
         player_first = False
         # Which of the moves performs first
@@ -647,39 +695,5 @@ def approximate_fitness(number_of_battles: 5, individual:list, dataset, verbose:
     return (feasibility, int(fitness_value * (TOTAL_RIVAL_PKM/pkm_defeated)), entire_logs)
 
 
-# Prepare data for use
+# Create DATASET
 dataset = load_json_in_dataset()
-
-keys = TRAINERS.keys()
-
-rival_teams = []
-for key in keys:
-    if key.startswith("RIVAL"):
-        rival_teams.append(TRAINERS[key]["1"])
-        rival_teams.append(TRAINERS[key]["4"])
-        rival_teams.append(TRAINERS[key]["7"])
-    else:
-        rival_teams.append(TRAINERS[key])
-
-
-DAMAGES_DICTIONARY = {}
-
-for rival_team in rival_teams:
-    level_cap = select_level_cap(rival_team)
-    # Rival pkm vs all pkdex
-    for rival_pkm in rival_team:
-        attacker = {
-            "species": rival_pkm["species"],
-            "level": rival_pkm["level"],
-            "ability": rival_pkm["ability"],
-            "moves": rival_pkm["moves"]
-        }
-        
-        for pkm_key, pkm_value in dataset["pkdex"].items():
-            defender = {
-                "species": pkm_value["name"],
-                "level": level_cap,
-                "ability": pkm_value["abilities"]
-            }
-            key = attacker["species"] + "|" + str(attacker["level"]) + "|" + defender["species"] + "|" + str(defender["level"])
-            DAMAGES_DICTIONARY[key] = select_best_attack(attacker=attacker, target=defender)

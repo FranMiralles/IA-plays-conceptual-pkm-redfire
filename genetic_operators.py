@@ -1,6 +1,6 @@
 import random
 from route_data.routes import ROUTES, ROUTES_ORDER
-from route_data.trainers import TRAINERS, TRAINERS_ORDER, PREVIOUS_ROUTES_TO_TRAINER
+from route_data.trainers import TRAINERS_ORDER, PREVIOUS_ROUTES_TO_TRAINER
 from individual import *
 
 
