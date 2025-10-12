@@ -232,7 +232,7 @@ def select_mode(generation, best_fitness_history, patience=20):
         return "exploitation"  # pocas generaciones, aún mejorando
     
     recent = best_fitness_history[-patience:]
-    delta = 0.001 * min(best_fitness_history)
+    delta = 0.01 * min(best_fitness_history)
     if min(recent) >= min(best_fitness_history) - delta:
         return "exploration"  # estancado, reexplorar
     
