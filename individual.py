@@ -30,7 +30,11 @@ def generate_individual():
     for i in range(0, 17):
         available =  [pkmID for pkmID in catches[:PREVIOUS_ROUTES_TO_TRAINER[TRAINERS_ORDER[i]]] if pkmID is not None]
         teams.append(random.sample(available, min(6, len(available))))
-
+    # Last 4 teams are permutations of the last team
+    teams.append(random.sample(teams[16], min(6, len(available))))
+    teams.append(random.sample(teams[16], min(6, len(available))))
+    teams.append(random.sample(teams[16], min(6, len(available))))
+    teams.append(random.sample(teams[16], min(6, len(available))))
     return [
         catches,
         teams

@@ -217,13 +217,55 @@ def get_best_individuals(population, x):
     sorted_population = sorted(evaluated_population, key=lambda ind: ind["fitness"])
     return sorted_population[:x]
 
-# ALGORITMO GENÉTICO OPTIMIZADO (VERSIÓN WINDOWS-SEGURA)
+def select_mode(generation, best_fitness_history, patience=20):
+    """
+    Decide si el algoritmo debe estar en modo 'exploración' o 'explotación'.
+    - generation: número de generación actual
+    - best_fitness_history: lista con los mejores fitness hasta ahora
+    - patience: número de generaciones sin mejora para cambiar a exploración
+    - delta: mejora mínima para considerarse progreso
+    """
+    if generation < 10:
+        return "exploration"  # primeras generaciones: explorar
+    
+    if len(best_fitness_history) < patience:
+        return "exploitation"  # pocas generaciones, aún mejorando
+    
+    recent = best_fitness_history[-patience:]
+    delta = 0.001 * min(best_fitness_history)
+    if min(recent) >= min(best_fitness_history) - delta:
+        return "exploration"  # estancado, reexplorar
+    
+    return "exploitation"
+
+# ALGORITMO GENÉTICO OPTIMIZADO
 if __name__ == "__main__":
+    best_fitness_history = []
+    avg_fitness_history = []
+    mode_history = []
     population = generate_population(POPULATION_NUMBER)
     
-    for generation in range(0, 0):
+    for generation in range(0, 10):
         print("GENERATION: ", generation)
         
+        # DECIDIR MODO (exploración/explotación)
+        mode = select_mode(generation, best_fitness_history)
+        print(f"  MODO: {mode.upper()}")
+
+        # Ajustar parámetros según modo
+        if mode == "exploration":
+            CROSS_PERCENTAGE = CROSS_PERCENTAGE_EXPLORATION
+            PROB_MUTATE_CATCHES = PROB_MUTATE_CATCHES_EXPLORATION
+            PROB_MUTATE_TEAM = PROB_MUTATE_TEAM_EXPLORATION
+            SELECTED_PERCENTAGE = SELECTED_PERCENTAGE_EXPLORATION
+            GENERATION_NUMBER = GENERATION_NUMBER_EXPLORATION
+        else:  # explotación
+            CROSS_PERCENTAGE = CROSS_PERCENTAGE_EXPLOITATION
+            PROB_MUTATE_CATCHES = PROB_MUTATE_CATCHES_EXPLOITATION
+            PROB_MUTATE_TEAM = PROB_MUTATE_TEAM_EXPLOITATION
+            SELECTED_PERCENTAGE = SELECTED_PERCENTAGE_EXPLOITATION
+            GENERATION_NUMBER = GENERATION_NUMBER_EXPLOITATION
+
         # 1. EVALUAR POBLACIÓN ACTUAL (solo los que no tienen fitness)
         # Usar versión secuencial para mayor estabilidad en Windows
         population = eval_population_sequential(population, dataset)
@@ -286,46 +328,44 @@ if __name__ == "__main__":
             current_fitness = [ind["fitness"] for ind in evaluated_population]
             best_fitness = min(current_fitness)
             avg_fitness = sum(current_fitness) / len(current_fitness)
+            best_fitness_history.append(best_fitness)
+            avg_fitness_history.append(avg_fitness)
+            mode_history.append(mode)
             print(f"  Mejor fitness: {best_fitness:.4f}, Promedio: {avg_fitness:.4f}")
             print("POPULATION:")
             print(population)
         
         print("-" * 50)
 
+    # Mostrar gráficos de evolución
+    import matplotlib.pyplot as plt
+    import numpy as np
+
+    generations = np.arange(1, len(best_fitness_history)+1)
+
+    # 1. Gráfico de fitness
+    plt.figure(figsize=(10,5))
+    plt.plot(generations, best_fitness_history, 'b-', marker='o', label="Mejor Fitness")
+    plt.plot(generations, avg_fitness_history, 'r--', marker='x', label="Fitness Promedio")
+    plt.xlabel("Generación")
+    plt.ylabel("Fitness")
+    plt.title("Evolución del Fitness")
+    plt.legend()
+    plt.grid(True)
+    plt.tight_layout()
+    plt.savefig("fitness_evolution.png")
+    plt.show()
+
+    # 2. Gráfico de modos (exploración/explotación)
+    mode_numeric = [1 if m=="exploration" else 0 for m in mode_history]  # 1 = exploración, 0 = explotación
+
+    plt.figure(figsize=(10,2))
+    plt.scatter(generations, mode_numeric, c=mode_numeric, cmap="coolwarm", marker='s', s=50)
+    plt.yticks([0,1], ["Explotación", "Exploración"])
+    plt.xlabel("Generación")
+    plt.title("Modo por Generación")
+    plt.grid(True, axis='x')
+    plt.tight_layout()
+    plt.savefig("mode_evolution.png")
+    plt.show()
     print("Ejecución completada")
-
-
-'''
-(pasa, value, logs)=calculate_fitness(
-
-
-    individual=[
-        [7, None, 56, None, None, 21, None, 74, 43, 63, None, None, None, 50, None, None, None, 58, 37, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None],
-        [
-            [7], # "GYM_PLATEADA"
-            [43, 7], #"GYM_CELESTE"
-            [50], # "GYM_CARMIN"
-            [58, 37], # "GYM_AZULONA"
-            [7, 58, 56], # "GIOVANNI_AZULONA"
-            [7, 58, 56], # "GIOVANNI_AZAFRAN"
-            [63], # "GYM_FUCSIA"
-            [58, 7], # "GYM_AZAFRAN"
-            [7], # "GYM_CANELA"
-            [7], # "GYM_VERDE"
-            [58, 43], # "ALTO_MANDO_LORELEI"
-            [7, 21], # "ALTO_MANDO_BRUNO"
-            [63, 7], # "ALTO_MANDO_AGATHA"
-            [7, 74] # "ALTO_MANDO_LANCE"
-        ]
-    ],
-    dataset=dataset,
-    verbose=True
-)
-
-#for log in logs:
-#    print(logs)
-print(value)
-
-'''
-
-

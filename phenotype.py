@@ -193,12 +193,12 @@ def prepare_entire_logs(entire_logs):
                 new_log.append(log[i] + SEPARATOR + active_player_pkm + SEPARATOR + active_rival_pkm)
                 i += 2
             elif log[i].startswith("PLAYER") and "HP" not in str(log[i]):
-                patron = r"\(.*\)"
+                patron = r"\[.*\]"
                 search = re.search(patron, log[i])
                 if search:
                     damage = search.group(0)
                     damage = float(damage.split(", ")[1][:-1]) * 100
-                    # Tengo que reescribir el pkm rival, por lo que busco el siguiente PLAYER con HP
+                    # Tengo que reescribir el pkm rival, por lo que busco el siguiente RIVAL con HP
                     for j in range(i, len(log)):
                         if log[j].startswith("RIVAL") and "HP" in str(log[j]):
                             rival_line = log[j].split(" ")
@@ -209,7 +209,7 @@ def prepare_entire_logs(entire_logs):
                     # No daña
                     new_log.append(log[i] + SEPARATOR + active_player_pkm + SEPARATOR + active_rival_pkm)
             elif log[i].startswith("RIVAL") and "HP" not in str(log[i]):
-                patron = r"\(.*\)"
+                patron = r"\[.*\]"
                 search = re.search(patron, log[i])
                 if search:
                     damage = search.group(0)
@@ -229,6 +229,8 @@ def prepare_entire_logs(entire_logs):
                 
 
         new_logs.append(new_log)
+        #if len(log) > 0 and "GAINS" in log[-1]:
+        #    log.append("VICTORY" + SEPARATOR + active_player_pkm + SEPARATOR + active_rival_pkm)
     return new_logs
 
 def select_direction(route_name: str):
@@ -780,7 +782,6 @@ class CombatPanel(QWidget):
 class App(QWidget):
     def __init__(self, individual, feasibility, fitness_value, entire_logs):
         # Preparar el individuo con un equipo por cada combate en la liga
-        individual[1] = individual[1] + [individual[1][-1]] * 4
         super().__init__()
 
         self.pkGIFList = []
@@ -1061,7 +1062,9 @@ class App(QWidget):
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
-    individual = generate_individual()
+    individual1 = generate_individual()
+    individual2 = generate_individual()
+    individual = crossover_individuals(individual1, individual2)
     (feasibility, fitness_value, entire_logs) = calculate_fitness(individual, dataset=dataset, verbose=False)
     window = App(individual, feasibility, fitness_value, entire_logs)
     window.show()

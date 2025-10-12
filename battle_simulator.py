@@ -625,7 +625,6 @@ def calculate_fitness(individual:list, dataset, verbose: bool):
 
     teams = individual[1]
     # Añadimos los equipos iguales para la liga pokémon
-    teams = teams + [teams[-1]] * 4
     for i in range(0, len(teams)):
         pkm_catched_previously = pkm_catched[:PREVIOUS_ROUTES_TO_TRAINER[TRAINERS_ORDER[i]]]
         # Comprobar que el equipo utilizado ha sido atrapado, sino penalizar con + INF y dejar de calcular

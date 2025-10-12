@@ -2,13 +2,20 @@ import random
 from route_data.routes import ROUTES, ROUTES_ORDER
 from route_data.trainers import TRAINERS_ORDER, PREVIOUS_ROUTES_TO_TRAINER
 from individual import *
+import copy
 
+def get_permutation_indices(lists):
+    base = lists[0]
+    pos = {v: i+1 for i, v in enumerate(base)}
+    return [[pos[v] for v in l] for l in lists]
+
+def apply_permutations(base, perms):
+    return [[base[i-1] for i in p] for p in perms]
 
 def mutate_individual_hard_feasibility(individual: list, prob_mutate_catches=0.2, prob_mutate_team=0.2, seed=None):
     '''
     Obtain a feasible individual (pkm used had been catched)
     '''
-    import copy
     
     if seed is not None:
         random.seed(seed)
@@ -20,6 +27,14 @@ def mutate_individual_hard_feasibility(individual: list, prob_mutate_catches=0.2
     
     previous_catches = catches.copy()
     
+    # Permutaciones para asignar luego a los equipos de la liga
+    equal_teams = [teams[16], teams[17], teams[18], teams[19], teams[20]]
+    permutations = get_permutation_indices(equal_teams)
+
+    # No mutar los últimos 4 equipos de la Liga
+    excluded_keys = ["ALTO_MANDO_BRUNO", "ALTO_MANDO_AGATHA", "ALTO_MANDO_LANCE", "RIVAL_CAMPEON"]
+    filtered_items = {k: v for k, v in PREVIOUS_ROUTES_TO_TRAINER.items() if k not in excluded_keys}
+
     # Mutate catches
     for i in range(0, len(catches)):
         if random.random() < prob_mutate_catches:
@@ -38,14 +53,14 @@ def mutate_individual_hard_feasibility(individual: list, prob_mutate_catches=0.2
                         else:
                             catches[j] = random.choice(available_j)
     
-    # CORREGIDO: Actualizar equipos basado en los cambios de capturas
+    # Arreglar equipos basado en los cambios de capturas
     for i in range(len(catches)):
         if catches[i] != previous_catches[i]:
             old_value = previous_catches[i]
             new_value = catches[i]
             
             # Encontrar qué entrenadores pueden usar esta captura (los que vienen DESPUÉS de la ruta i)
-            for trainer_index, (trainer_name, max_route) in enumerate(PREVIOUS_ROUTES_TO_TRAINER.items()):
+            for trainer_index, (trainer_name, max_route) in enumerate(filtered_items.items()):
                 # El entrenador puede usar pokémon de rutas <= max_route
                 if i < max_route:
                     # Actualizar en el equipo de este entrenador
@@ -53,13 +68,13 @@ def mutate_individual_hard_feasibility(individual: list, prob_mutate_catches=0.2
                         if teams[trainer_index][pkm_index] == old_value:
                             teams[trainer_index][pkm_index] = new_value
     
-    # CORREGIDO: Limpiar equipos y asegurar que solo usen pokémon disponibles
-    for trainer_index, (trainer_name, max_route) in enumerate(PREVIOUS_ROUTES_TO_TRAINER.items()):
+    # Limpiar equipos que se hayan podido quedar con algún None y asegurar que añadan pokémon disponibles
+    for trainer_index, (trainer_name, max_route) in enumerate(filtered_items.items()):
         # Pokémon disponibles para este entrenador
         available_pokemon = [pkm for pkm in catches[:max_route] if pkm is not None]
         
         # Limpiar equipo actual: quitar pokémon que ya no están disponibles
-        cleaned_team = [pkm for pkm in teams[trainer_index] if pkm in available_pokemon]
+        cleaned_team = list(set(pkm for pkm in teams[trainer_index] if pkm in available_pokemon))
         
         # Si el equipo tiene menos de 6 pokémon, completar con disponibles
         if len(cleaned_team) < 6:
@@ -82,68 +97,88 @@ def mutate_individual_hard_feasibility(individual: list, prob_mutate_catches=0.2
 
     
     # Mutate teams
-    for trainer_index, (trainer_name, max_route) in enumerate(PREVIOUS_ROUTES_TO_TRAINER.items()):
+   
+    for trainer_index, (trainer_name, max_route) in enumerate(filtered_items.items()):
         # Pokémon disponibles para este entrenador
         available_pokemon = [pkm for pkm in catches[:max_route] if pkm is not None]
         
         # Si no hay pokémon disponibles, saltar este entrenador
         if not available_pokemon:
             continue
-            
+        
         for pkm_index in range(len(teams[trainer_index])):
             if random.random() < prob_mutate_team:
                 current_pkm = teams[trainer_index][pkm_index]
                 
                 # Opciones disponibles (excluyendo el actual y los que ya están en el equipo)
                 team_without_current = [pkm for i, pkm in enumerate(teams[trainer_index]) if i != pkm_index]
-                available_options = [pkm for pkm in available_pokemon 
-                                if pkm != current_pkm and pkm not in team_without_current]
-                
+                available_options = [pkm for pkm in available_pokemon
+                                    if pkm != current_pkm and pkm not in team_without_current]
+
                 if available_options:
                     # Elegir nuevo pokémon
                     new_pkm = random.choice(available_options)
                     teams[trainer_index][pkm_index] = new_pkm
-                else:
-                    # Si no hay opciones, mantener el actual
-                    pass
 
+    teams_ligue = apply_permutations(teams[16], permutations)
+    teams[17] = teams_ligue[1]
+    teams[18] = teams_ligue[2]
+    teams[19] = teams_ligue[3]
+    teams[20] = teams_ligue[4]
+
+    # Con probabilidad prob_mutate_team, permutar alguno de equipos
+    for i in range(0, 21):
+        if random.random() < prob_mutate_team:
+            # Permutar el equipo
+            random.shuffle(teams[i])
+    
     return mutated_individual
+
+
+
 
 def crossover_individuals(parent1: list, parent2: list, seed=None):
     '''
     Crossover between two individuals
     Returns a feasible child
     '''
-    import random
-    import copy
     if seed is not None:
         random.seed(seed)
     
-    # Crear estructura básica del hijo
     child = [
         [None] * len(parent1[0]),  # catches
         []  # teams
     ]
     
-    # 1. Combinar equipos (mitad de cada padre)
     teams1 = parent1[1]
     teams2 = parent2[1]
     
-    # Seleccionar aleatoriamente qué equipos vienen de cada padre
-    team_indices = list(range(len(teams1)))
+    num_teams = len(teams1)
+    last_five = list(range(num_teams - 5, num_teams))  # [16, 17, 18, 19, 20] si hay 21 equipos
+    
+    # Elegir al azar de qué padre vienen los últimos 5 equipos
+    league_parent = random.choice([1, 2])
+    
+    # Seleccionar aleatoriamente qué equipos (excepto los últimos 5) vienen de cada padre
+    team_indices = list(range(num_teams - 5))  # solo los primeros
     random.shuffle(team_indices)
-    
     half = len(team_indices) // 2
-    from_parent1 = team_indices[:half]
-    from_parent2 = team_indices[half:]
+    from_parent1 = set(team_indices[:half])
     
-    # Construir equipos del hijo
     child_teams = []
-    for i in range(len(teams1)):
-        if i in from_parent1:
-            child_teams.append(teams1[i][:])  # copia
+    for i in range(num_teams):
+        if i in last_five:
+            # Últimos 5 equipos del mismo padre
+            if league_parent == 1:
+                child_teams.append(teams1[i][:])
+            else:
+                child_teams.append(teams2[i][:])
         else:
-            child_teams.append(teams2[i][:])  # copia
+            # Resto de equipos cruzados normalmente
+            if i in from_parent1:
+                child_teams.append(teams1[i][:])
+            else:
+                child_teams.append(teams2[i][:])
     
     child[1] = child_teams
     
@@ -154,6 +189,10 @@ def crossover_individuals(parent1: list, parent2: list, seed=None):
     # 3. Asegurar que los equipos solo usen pokémon disponibles
     child = ensure_teams_feasibility(child)
     
+    # Obligar que los últimos 5 equipos tengan los mismo enteros aunque pueden estar en distinto orden
+    for i in range(17, 21):
+        child[1][i] = random.sample(child[1][16], min(6, len(child[1][16])))
+
     return child
 
 def build_feasible_catches(teams):
@@ -263,35 +302,3 @@ def is_feasible(individual: list) -> bool:
                 return False
     
     return True
-
-
-for i in range(0, 0):
-
-    '''
-    individual = generate_individual()
-    print("INDIVIDUAL")
-    individual_mutated = mutate_individual_hard_feasibility(individual, 0.1, 1)
-    print("INDIVIDUAL MUTATED")
-    print(individual_mutated)
-
-
-    (pasa, fitness_value, log) = calculate_fitness(individual_mutated, dataset=dataset, verbose=False)
-
-    if fitness_value == float("inf"):
-        print("SALIENDO POR IMPOSIBLE")
-        exit()
-    print((pasa, fitness_value, log[:10]))
-    '''
-
-    parent1 = generate_individual()
-    print(parent1)
-    parent2 = generate_individual()
-    print(parent2)
-    individual_son = crossover_individuals(parent1, parent2)
-
-    (pasa, fitness_value, log) = calculate_fitness(individual_son, dataset=dataset, verbose=False)
-
-    if fitness_value == float("inf"):
-        print("SALIENDO POR IMPOSIBLE")
-        exit()
-    print((pasa, fitness_value, log[:10]))

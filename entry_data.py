@@ -1,10 +1,14 @@
-POPULATION_NUMBER = 400 # Number of individuals in my population
-SELECTED_PERCENTAGE = 0.6 # Percentage of individuals selected to mutate and cross
-CROSS_PERCENTAGE = 0.7 # Percentage from selected individuals to be crossed
-GENERATION_NUMBER = 320 # Number of individuals that survive to the generation before generating random ones
+POPULATION_NUMBER = 500 # Number of individuals in my population
 
-
-MIN_TRAINERS_DEFEATED_TO_APROX_FITNESS = 6
-MAX_TRAINERS_DEFEATED_TO_APROX_FITNESS = 10
-PROB_MUTATE_CATCHES = 0.15
-PROB_MUTATE_TEAM = 0.15
+# Exploration parameters
+SELECTED_PERCENTAGE_EXPLORATION = 0.8 # Percentage of individuals selected to mutate and cross
+CROSS_PERCENTAGE_EXPLORATION = 0.9 # Percentage from selected individuals to be crossed
+PROB_MUTATE_CATCHES_EXPLORATION = 0.25
+PROB_MUTATE_TEAM_EXPLORATION = 0.25
+GENERATION_NUMBER_EXPLORATION = int(0.05 * POPULATION_NUMBER)  # Number of individuals that survive to the generation before generating random ones
+# Exploitation parameters
+SELECTED_PERCENTAGE_EXPLOITATION = 0.5
+CROSS_PERCENTAGE_EXPLOITATION = 0.5
+PROB_MUTATE_CATCHES_EXPLOITATION = 0.1
+PROB_MUTATE_TEAM_EXPLOITATION = 0.1
+GENERATION_NUMBER_EXPLOITATION = int(0.3 * POPULATION_NUMBER)
