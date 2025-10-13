@@ -1062,10 +1062,9 @@ class App(QWidget):
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
-    individual1 = generate_individual()
-    individual2 = generate_individual()
-    individual = crossover_individuals(individual1, individual2)
-    (feasibility, fitness_value, entire_logs) = calculate_fitness(individual, dataset=dataset, verbose=False)
-    window = App(individual, feasibility, fitness_value, entire_logs)
+    individual1 = [[7, 16, 19, 10, 13, 21, 23, 35, 43, 63, 52, 69, 129, 50, 27, 56, 41, 37, 58, 84, 92, 54, 79, 48, 43, 147, 21, 19, 72, 116, 114, 86, 109, 25, 60, 95], [[19, 16, 7, 13, 10], [7, 19, 10, 13, 16], [19, 10, 13, 16, 7, 23], [43, 13, 16, 19, 23, 63], [129, 35, 16, 50, 10, 7], [52, 69, 13, 50, 35, 63], [129, 63, 69, 43, 19, 56], [41, 13, 16, 84, 21, 92], [56, 37, 19, 27, 63, 52], [129, 37, 43, 50, 52, 92], [92, 10, 43, 50, 56, 84], [92, 7, 13, 50, 23, 58], [129, 54, 37, 43, 58, 63], [72, 69, 52, 21, 23, 27], [63, 84, 50, 114, 43, 116], [129, 37, 10, 21, 23, 56], [72, 79, 147, 54, 56, 25], [147, 25, 72, 56, 79, 54], [147, 72, 25, 79, 54, 56], [25, 72, 147, 56, 79, 54], [72, 147, 25, 56, 79, 54]]]
+    #individual = crossover_individuals(individual1, individual2)
+    (feasibility, fitness_value, entire_logs) = calculate_fitness(individual1, dataset=dataset, verbose=False)
+    window = App(individual1, feasibility, fitness_value, entire_logs)
     window.show()
     sys.exit(app.exec_())

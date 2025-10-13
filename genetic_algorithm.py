@@ -6,11 +6,11 @@ from concurrent.futures import ThreadPoolExecutor
 import multiprocessing
 import os
 
-def generate_population(quantity):
+def generate_population(quantity, inteligent_generation=False):
     population = []
     for i in range(0, quantity):
         population.append({
-            "gene": generate_individual(),
+            "gene": generate_individual(inteligent_generation=inteligent_generation),
             "fitness": None  # Inicialmente sin calcular
         })
     return population
@@ -217,42 +217,62 @@ def get_best_individuals(population, x):
     sorted_population = sorted(evaluated_population, key=lambda ind: ind["fitness"])
     return sorted_population[:x]
 
-def select_mode(generation, best_fitness_history, patience=20):
+def select_mode(generation, best_fitness_history, mode_history, patience=20, long_patience=50):
     """
-    Decide si el algoritmo debe estar en modo 'exploración' o 'explotación'.
+    Decide si el algoritmo debe estar en modo 'exploration' o 'exploitation'.
+
+    Parámetros:
     - generation: número de generación actual
     - best_fitness_history: lista con los mejores fitness hasta ahora
-    - patience: número de generaciones sin mejora para cambiar a exploración
-    - delta: mejora mínima para considerarse progreso
+    - mode_history: lista con los modos elegidos hasta ahora
+    - patience: nº de generaciones sin mejora para pasar a exploración
+    - long_patience: nº de generaciones sin cambio de modo ni mejora para forzar cambio
     """
-    if generation < 10:
-        return "exploration"  # primeras generaciones: explorar
-    
+    if generation < 5:
+        return "exploration"
+
     if len(best_fitness_history) < patience:
-        return "exploitation"  # pocas generaciones, aún mejorando
-    
+        return "exploitation"
+
     recent = best_fitness_history[-patience:]
-    delta = 0.01 * min(best_fitness_history)
+    delta = 0.005 * min(best_fitness_history)
     if min(recent) >= min(best_fitness_history) - delta:
-        return "exploration"  # estancado, reexplorar
-    
-    return "exploitation"
+        mode = "exploration"  # estancamiento → explorar
+    else:
+        mode = "exploitation"
+
+    # Si el modo no ha cambiado en `long_patience` generaciones
+    # y tampoco ha mejorado el fitness → forzar cambio de modo
+    if len(best_fitness_history) >= long_patience:
+        recent_modes = mode_history[-long_patience:]
+        recent_fitness = best_fitness_history[-long_patience:]
+
+        # comprobar si el modo ha sido el mismo todo este tiempo
+        no_mode_change = len(set(recent_modes)) == 1
+        no_improvement = min(recent_fitness) >= min(best_fitness_history) - delta
+
+        if no_mode_change and no_improvement:
+            # forzar cambio de modo (invertir)
+            mode = "exploration" if recent_modes[-1] == "exploitation" else "exploitation"
+
+    return mode
 
 # ALGORITMO GENÉTICO OPTIMIZADO
 if __name__ == "__main__":
     best_fitness_history = []
     avg_fitness_history = []
     mode_history = []
-    population = generate_population(POPULATION_NUMBER)
+    population = generate_population(POPULATION_NUMBER, inteligent_generation=False)
     
-    for generation in range(0, 10):
+    for generation in range(0, 1501):
         print("GENERATION: ", generation)
         
         # DECIDIR MODO (exploración/explotación)
-        mode = select_mode(generation, best_fitness_history)
-        print(f"  MODO: {mode.upper()}")
+        #mode = select_mode(generation, best_fitness_history, mode_history)
+        #print(f"  MODO: {mode.upper()}")
 
         # Ajustar parámetros según modo
+        '''
         if mode == "exploration":
             CROSS_PERCENTAGE = CROSS_PERCENTAGE_EXPLORATION
             PROB_MUTATE_CATCHES = PROB_MUTATE_CATCHES_EXPLORATION
@@ -265,7 +285,7 @@ if __name__ == "__main__":
             PROB_MUTATE_TEAM = PROB_MUTATE_TEAM_EXPLOITATION
             SELECTED_PERCENTAGE = SELECTED_PERCENTAGE_EXPLOITATION
             GENERATION_NUMBER = GENERATION_NUMBER_EXPLOITATION
-
+        '''
         # 1. EVALUAR POBLACIÓN ACTUAL (solo los que no tienen fitness)
         # Usar versión secuencial para mayor estabilidad en Windows
         population = eval_population_sequential(population, dataset)
@@ -317,7 +337,7 @@ if __name__ == "__main__":
         best_individuals = get_best_individuals(all_individuals, GENERATION_NUMBER)
         
         # 7. COMPLETAR POBLACIÓN
-        new_random = generate_population(POPULATION_NUMBER - GENERATION_NUMBER)
+        new_random = generate_population(POPULATION_NUMBER - GENERATION_NUMBER, inteligent_generation=True)
         
         # 8. NUEVA POBLACIÓN (los mejores mantienen su fitness, los nuevos no)
         population = best_individuals + new_random
@@ -330,12 +350,13 @@ if __name__ == "__main__":
             avg_fitness = sum(current_fitness) / len(current_fitness)
             best_fitness_history.append(best_fitness)
             avg_fitness_history.append(avg_fitness)
-            mode_history.append(mode)
+            #mode_history.append("EXPLORATION")
             print(f"  Mejor fitness: {best_fitness:.4f}, Promedio: {avg_fitness:.4f}")
-            print("POPULATION:")
-            print(population)
+            
         
         print("-" * 50)
+    print("POPULATION:")
+    print(population)
 
     # Mostrar gráficos de evolución
     import matplotlib.pyplot as plt
@@ -353,9 +374,10 @@ if __name__ == "__main__":
     plt.legend()
     plt.grid(True)
     plt.tight_layout()
-    plt.savefig("fitness_evolution.png")
+    plt.savefig("fitness_evolution_5000.png")
     plt.show()
 
+    '''
     # 2. Gráfico de modos (exploración/explotación)
     mode_numeric = [1 if m=="exploration" else 0 for m in mode_history]  # 1 = exploración, 0 = explotación
 
@@ -366,6 +388,7 @@ if __name__ == "__main__":
     plt.title("Modo por Generación")
     plt.grid(True, axis='x')
     plt.tight_layout()
-    plt.savefig("mode_evolution.png")
+    plt.savefig("mode_evolution_4.png")
     plt.show()
     print("Ejecución completada")
+    '''
