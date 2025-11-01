@@ -260,11 +260,13 @@ def select_mode(generation, best_fitness_history, mode_history, patience=20, lon
 # ALGORITMO GENÉTICO OPTIMIZADO
 if __name__ == "__main__":
     best_fitness_history = []
+    generation_fitness_history = []
     avg_fitness_history = []
     mode_history = []
     population = generate_population(POPULATION_NUMBER, inteligent_generation=False)
+    mode = "exploracion"
     
-    for generation in range(0, 1501):
+    for generation in range(0, 210):
         print("GENERATION: ", generation)
         
         # DECIDIR MODO (exploración/explotación)
@@ -342,19 +344,82 @@ if __name__ == "__main__":
         # 8. NUEVA POBLACIÓN (los mejores mantienen su fitness, los nuevos no)
         population = best_individuals + new_random
         
+        #9 EVALUAR
+        evaluated_population = [ind for ind in population if ind.get("fitness") is not None]
+
         # 9. MOSTRAR PROGRESO
         evaluated_population = [ind for ind in population if ind.get("fitness") is not None]
         if evaluated_population:
             current_fitness = [ind["fitness"] for ind in evaluated_population]
-            best_fitness = min(current_fitness)
+            current_best_fitness = min(current_fitness)
+            
+            # Inicializar mode_history si está vacío
+            if not hasattr(mode_history, '__len__'):
+                mode_history = []
+            
+            # Al empezar, 5 generaciones en exploración
+            if len(generation_fitness_history) < 5:
+                mode = "exploracion"
+                # Aplicar parámetros de exploración
+                SELECTED_PERCENTAGE = SELECTED_PERCENTAGE_EXPLORATION
+                CROSS_PERCENTAGE = CROSS_PERCENTAGE_EXPLORATION
+                PROB_MUTATE_CATCHES = PROB_MUTATE_CATCHES_EXPLORATION
+                PROB_MUTATE_TEAM = PROB_MUTATE_TEAM_EXPLORATION
+                GENERATION_NUMBER = GENERATION_NUMBER_EXPLORATION
+            
+            else:
+                # Extraer los MEJORES fitness de las últimas 5 generaciones
+                last_five_best_fitness = [min(gen_fitness) for gen_fitness in generation_fitness_history[-5:]]
+                
+                # Verificar si estamos en periodo mínimo de explotación (últimas 5 generaciones)
+                last_five_modes = mode_history[-5:] if len(mode_history) >= 5 else mode_history
+                in_min_exploitation_period = len(last_five_modes) > 0 and all(m == "explotacion" for m in last_five_modes)
+                
+                # Si actualmente estamos en explotación y no hemos cumplido las 5 generaciones, mantener explotación
+                if len(mode_history) > 0 and mode_history[-1] == "explotacion" and not in_min_exploitation_period:
+                    # Mantener explotación hasta cumplir 5 generaciones
+                    print("MANTENIENDO EXPLOTACIÓN - Periodo mínimo")
+                    SELECTED_PERCENTAGE = SELECTED_PERCENTAGE_EXPLOITATION
+                    CROSS_PERCENTAGE = CROSS_PERCENTAGE_EXPLOITATION
+                    PROB_MUTATE_CATCHES = PROB_MUTATE_CATCHES_EXPLOITATION
+                    PROB_MUTATE_TEAM = PROB_MUTATE_TEAM_EXPLOITATION
+                    GENERATION_NUMBER = GENERATION_NUMBER_EXPLOITATION
+                    mode = "explotacion"
+                
+                # Si hay mejora y no estamos forzados a mantener exploración, ir a explotación
+                elif current_best_fitness < min(last_five_best_fitness):
+                    print("MODO EXPLOTACIÓN - Mejora detectada")
+                    SELECTED_PERCENTAGE = SELECTED_PERCENTAGE_EXPLOITATION
+                    CROSS_PERCENTAGE = CROSS_PERCENTAGE_EXPLOITATION
+                    PROB_MUTATE_CATCHES = PROB_MUTATE_CATCHES_EXPLOITATION
+                    PROB_MUTATE_TEAM = PROB_MUTATE_TEAM_EXPLOITATION
+                    GENERATION_NUMBER = GENERATION_NUMBER_EXPLOITATION
+                    mode = "explotacion"
+                
+                else:
+                    # No hay mejora o ya cumplimos periodo de explotación
+                    print("MODO EXPLORACIÓN")
+                    print(f"Current best: {current_best_fitness}")
+                    print(f"Last five bests: {last_five_best_fitness}")
+                    print(f"Min of last five: {min(last_five_best_fitness)}")
+                    
+                    SELECTED_PERCENTAGE = SELECTED_PERCENTAGE_EXPLORATION
+                    CROSS_PERCENTAGE = CROSS_PERCENTAGE_EXPLORATION
+                    PROB_MUTATE_CATCHES = PROB_MUTATE_CATCHES_EXPLORATION
+                    PROB_MUTATE_TEAM = PROB_MUTATE_TEAM_EXPLORATION
+                    GENERATION_NUMBER = GENERATION_NUMBER_EXPLORATION
+                    mode = "exploracion"
+            
+            # Guardar historial
+            generation_fitness_history.append(current_fitness)
+            mode_history.append(mode)
+            best_fitness = current_best_fitness
             avg_fitness = sum(current_fitness) / len(current_fitness)
             best_fitness_history.append(best_fitness)
             avg_fitness_history.append(avg_fitness)
-            #mode_history.append("EXPLORATION")
-            print(f"  Mejor fitness: {best_fitness:.4f}, Promedio: {avg_fitness:.4f}")
             
-        
-        print("-" * 50)
+            print(f"  Mejor fitness: {best_fitness:.4f}, Promedio: {avg_fitness:.4f}, Mode: {mode}")
+            print("-" * 50)
     print("POPULATION:")
     print(population)
 
@@ -374,7 +439,7 @@ if __name__ == "__main__":
     plt.legend()
     plt.grid(True)
     plt.tight_layout()
-    plt.savefig("fitness_evolution_5000.png")
+    plt.savefig("fitness_evolution_5000_2.png")
     plt.show()
 
     '''

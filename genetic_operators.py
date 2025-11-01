@@ -300,5 +300,20 @@ def is_feasible(individual: list) -> bool:
         for pkm in team:
             if pkm is not None and pkm not in available_pokemon:
                 return False
+            
+    last_five_teams = teams[-5:]
+    
+    # Obtener los conjuntos de valores (sin None) para cada equipo, ordenados
+    team_sets = []
+    for team in last_five_teams:
+        # Filtrar valores no None y ordenar
+        team_values = sorted([pkm for pkm in team if pkm is not None])
+        team_sets.append(team_values)
+    
+    # Verificar que todos los conjuntos sean iguales
+    first_team_set = team_sets[0]
+    for team_set in team_sets[1:]:
+        if team_set != first_team_set:
+            return False
     
     return True
