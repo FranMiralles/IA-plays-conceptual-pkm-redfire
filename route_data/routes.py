@@ -1,4 +1,3 @@
-# Dictionary of pokemon per route
 ROUTES = {
     "PUEBLO PALETA": [1, 7, 4],
     "RUTA 1": [16, 19],

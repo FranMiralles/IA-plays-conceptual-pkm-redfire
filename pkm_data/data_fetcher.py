@@ -64,7 +64,6 @@ def save_pokedex():
                 for detail in move["version_group_details"]:
                     if detail["version_group"]["name"] == "firered-leafgreen" and (detail["move_learn_method"]["name"] == "level-up" or detail["move_learn_method"]["name"] == "machine") and move["move"]["name"] in moves:
 
-                        # Correct new names to previous versions
                         move_name = move["move"]["name"]
                         if move_name == "vice-grip":
                             move_name = "vise-grip"
@@ -181,7 +180,7 @@ def save_evolutions():
     guardar_json(evolutions, "./pkm_data/evolutions.json")
 
 def save_sprites():
-    # --- Cargar la pokédex ---
+    # Cargar la pokédex
     pkdex_path = "./pkm_data/pkdex.json"
     if not os.path.exists(pkdex_path):
         print("No existe el archivo de Pokédex. Ejecuta primero save_pokedex().")
@@ -190,18 +189,16 @@ def save_sprites():
     with open(pkdex_path, "r", encoding="utf-8") as f:
         pkdex = json.load(f)
 
-    # --- Carpeta sprites ---
+    # Carpeta sprites
     os.makedirs("./pkm_data/sprites", exist_ok=True)
 
     for i, pkm in pkdex.items():
         for orientation in ("front", "back"):
             sprite_path = pkm["sprite"][orientation]
 
-            # Si ya existe el archivo y no está vacío → lo saltamos
             if os.path.exists(sprite_path) and os.path.getsize(sprite_path) > 0:
                 continue
 
-            # Buscar la URL desde la API (porque en el JSON solo está la ruta local)
             try:
                 res = requests.get(f"https://pokeapi.co/api/v2/pokemon/{i}", timeout=10)
                 res.raise_for_status()
@@ -225,7 +222,6 @@ def save_sprites():
                 print(f"[{i}] Error al descargar sprite {orientation}: {e}")
                 continue
 
-            # Pequeña pausa para no saturar la API
             time.sleep(0.2)
 
     
@@ -235,7 +231,6 @@ def normalize_sprites():
     output_folder = "./pkm_data/normalized_sprites"
     os.makedirs(output_folder, exist_ok=True)
 
-    # Max dimensions
     max_width, max_height = 0, 0
     for file in os.listdir(input_folder):
         if file.lower().endswith(".gif"):
@@ -248,14 +243,13 @@ def normalize_sprites():
 
     print(f"Tamaño máximo encontrado: {max_width}x{max_height}")
 
-    # Processing and redimension
     for file in os.listdir(input_folder):
         if file.lower().endswith(".gif") and not file.lower().endswith("pokeball_loading.gif"):
             path = os.path.join(input_folder, file)
             with Image.open(path) as img:
                 frames = []
                 for frame in ImageSequence.Iterator(img):
-                    frame = frame.convert("RGBA")  # Asegurar compatibilidad
+                    frame = frame.convert("RGBA")
 
                     # Crear lienzo vacío con el tamaño máximo
                     new_frame = Image.new("RGBA", (max_width, max_height), (0, 0, 0, 0))

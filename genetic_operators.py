@@ -38,7 +38,6 @@ def mutate_individual_hard_feasibility(individual: list, prob_mutate_catches=0.2
     # Mutate catches
     for i in range(0, len(catches)):
         if random.random() < prob_mutate_catches:
-            # Mutate from possible pkm in route that has not been catched yet
             catched_yet = catches[:i]
             available = [x for x in ROUTES[ROUTES_ORDER[i]] if x != catches[i] and x not in catched_yet]
             if len(available) != 0:
@@ -59,7 +58,7 @@ def mutate_individual_hard_feasibility(individual: list, prob_mutate_catches=0.2
             old_value = previous_catches[i]
             new_value = catches[i]
             
-            # Encontrar qué entrenadores pueden usar esta captura (los que vienen DESPUÉS de la ruta i)
+            # Encontrar qué entrenadores pueden usar esta captura
             for trainer_index, (trainer_name, max_route) in enumerate(filtered_items.items()):
                 # El entrenador puede usar pokémon de rutas <= max_route
                 if i < max_route:
@@ -73,7 +72,7 @@ def mutate_individual_hard_feasibility(individual: list, prob_mutate_catches=0.2
         # Pokémon disponibles para este entrenador
         available_pokemon = [pkm for pkm in catches[:max_route] if pkm is not None]
         
-        # Limpiar equipo actual: quitar pokémon que ya no están disponibles
+        # Limpiar equipo actual quitar pokémon que ya no están disponibles
         cleaned_team = list(set(pkm for pkm in teams[trainer_index] if pkm in available_pokemon))
         
         # Si el equipo tiene menos de 6 pokémon, completar con disponibles
@@ -110,7 +109,7 @@ def mutate_individual_hard_feasibility(individual: list, prob_mutate_catches=0.2
             if random.random() < prob_mutate_team:
                 current_pkm = teams[trainer_index][pkm_index]
                 
-                # Opciones disponibles (excluyendo el actual y los que ya están en el equipo)
+                # Opciones disponibles excluyendo el actual y los que ya están en el equipo
                 team_without_current = [pkm for i, pkm in enumerate(teams[trainer_index]) if i != pkm_index]
                 available_options = [pkm for pkm in available_pokemon
                                     if pkm != current_pkm and pkm not in team_without_current]
@@ -146,15 +145,15 @@ def crossover_individuals(parent1: list, parent2: list, seed=None):
         random.seed(seed)
     
     child = [
-        [None] * len(parent1[0]),  # catches
-        []  # teams
+        [None] * len(parent1[0]),
+        []
     ]
     
     teams1 = parent1[1]
     teams2 = parent2[1]
     
     num_teams = len(teams1)
-    last_five = list(range(num_teams - 5, num_teams))  # [16, 17, 18, 19, 20] si hay 21 equipos
+    last_five = list(range(num_teams - 5, num_teams))
     
     # Elegir al azar de qué padre vienen los últimos 5 equipos
     league_parent = random.choice([1, 2])

@@ -31,15 +31,15 @@ def generate_individual(inteligent_generation=False):
     Generates a random individual that uses pkms catched on the run
     '''
 
-    used = set()        # Not to repeat pkm
-    catches = []        # Catches in routes
+    used = set()
+    catches = []
 
     for route in ROUTES_ORDER:
         options = ROUTES.get(route, [])
         # Filter available pkm to catch in each route
         available = [pkm for pkm in options if pkm not in used]
         if available:
-            chosen = random.choice(available)  # Choose randomly
+            chosen = random.choice(available)
             used.add(chosen)
         else:
             chosen = None

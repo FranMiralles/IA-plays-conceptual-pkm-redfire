@@ -162,10 +162,10 @@ class DualColorLabel(QLabel):
         path.addRoundedRect(QRectF(self.rect()), 10, 10)
         painter.setClipPath(path)  # recorta el área al radio
 
-        # Mitad superior - Color 1
+        # Mitad superior Color 1
         painter.fillRect(0, 0, self.width(), self.height() // 2, QColor(0, 0, 255, 65))
 
-        # Mitad inferior - Color 2
+        # Mitad inferior Color 2
         painter.fillRect(0, self.height() // 2, self.width(), self.height() // 2, QColor(255, 0, 0, 65))
 
         # Dibuja el texto del QLabel normalmente
@@ -198,7 +198,7 @@ def prepare_entire_logs(entire_logs):
                 if search:
                     damage = search.group(0)
                     damage = float(damage.split(", ")[1][:-1]) * 100
-                    # Tengo que reescribir el pkm rival, por lo que busco el siguiente RIVAL con HP
+
                     for j in range(i, len(log)):
                         if log[j].startswith("RIVAL") and "HP" in str(log[j]):
                             rival_line = log[j].split(" ")
@@ -214,7 +214,7 @@ def prepare_entire_logs(entire_logs):
                 if search:
                     damage = search.group(0)
                     damage = float(damage.split(", ")[1][:-1]) * 100
-                    # Tengo que reescribir el pkm del jugador, por lo que busco el siguiente PLAYER con HP
+
                     for j in range(i, len(log)):
                         if log[j].startswith("PLAYER") and "HP" in str(log[j]):
                             player_line = log[j].split(" ")
@@ -249,13 +249,13 @@ class MapPanel(QWidget):
         self.setMinimumWidth(50)
         self.setMinimumHeight(50)
         self.setMouseTracking(True)
-        # --- Imagen base ---
+        # Imagen base
         self.map_label = QLabel(self)
         self.pixmap = QPixmap("images/map.png")
         self.map_label.setPixmap(self.pixmap)
         self.map_label.setScaledContents(True)
 
-        # Widgets que representan cada ruta (gif o texto)
+        # Widgets que representan cada ruta
         self.route_widgets = []
         for i, pkGIF in enumerate(pkGIFList):
             gif_label = QLabel(self)
@@ -365,7 +365,7 @@ class CombatPanel(QWidget):
         self.setMinimumWidth(50)
         self.setMinimumHeight(50)
         self.setMouseTracking(True)
-        # --- Imagen base ---
+        # Imagen base
         self.map_label = QLabel(self)
         self.pixmap = QPixmap("images/forest.png")
         self.map_label.setPixmap(self.pixmap)
@@ -449,7 +449,7 @@ class CombatPanel(QWidget):
 
         # Label del team preview
         self.teamPreview =  DualColorLabel("", self)
-        self.teamPreviewText = QLabel("TEAM PREVIEW", self)  # Hacerlo atributo de la clase
+        self.teamPreviewText = QLabel("TEAM PREVIEW", self)
         self.teamPreviewText.setStyleSheet("color: white; font-weight: bold; background-color: rgba(0, 0, 0, 0.6); padding: 5px; border-top-left-radius: 10px; border-top-right-radius: 10px;")
         self.teamPreviewText.setAlignment(Qt.AlignCenter)
 
@@ -580,10 +580,10 @@ class CombatPanel(QWidget):
     def position_log_label(self, w, h):
         """Posiciona el label de logs en la posición relativa especificada"""
         # Calcular posición (0.5, 0.8) relativa al tamaño del widget
-        label_width = int(w * 0.93)  # 80% del ancho del widget
-        label_height = int(h * 0.15)  # 10% del alto del widget
-        label_x = int(w * 0.035)  # Centrado: (1 - 0.8) / 2 = 0.1
-        label_y = int(h * 0.825)  # 80% desde la parte superior
+        label_width = int(w * 0.93)
+        label_height = int(h * 0.15)
+        label_x = int(w * 0.035)
+        label_y = int(h * 0.825)
         
         self.labelLog.resize(label_width, label_height)
         self.labelLog.move(label_x, label_y)
@@ -595,7 +595,7 @@ class CombatPanel(QWidget):
         button_height = int(h * 0.07)
         
         # Posición base para los botones (a la derecha del label)
-        base_x = int(w * 0.66)  # 0.1 + 0.6 + 0.02 = 0.72
+        base_x = int(w * 0.66)
         base_y = int(h * 0.83)
         
         # Posicionar cada botón
@@ -617,7 +617,7 @@ class CombatPanel(QWidget):
         increment = 0.18
         widget_size = int(w * 0.2 * increment), int(h * 0.3 * increment)
         
-        # Posiciones del jugador: empezar en (0.2w, 0.2h) y bajar en intervalos de 0.1 en y
+        # Posiciones del jugador
         player_base_x = 0.04
         player_base_y = 0.07
         x_increment = 0.04
@@ -631,7 +631,7 @@ class CombatPanel(QWidget):
             widget.move(x, y)
             movie.setScaledSize(widget.size())
         
-        # Posiciones del rival: empezar en (0.8w, 0.2h) y bajar en intervalos de 0.1 en y
+        # Posiciones del rival
         rival_base_x = 0.04
         rival_base_y = 0.135
         
@@ -810,7 +810,7 @@ class App(QWidget):
         self.selected_main_button = None
         self.selected_sub_buttons = {"mapa": None, "combates": None}
 
-        # --- Layout principal (horizontal) ---
+        # Layout principal (horizontal)
         layout = QHBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
@@ -861,7 +861,7 @@ class App(QWidget):
         main_menu_widget.setObjectName("main_menu")
         main_menu_widget.setFixedWidth(190)
 
-        # ===== SUBMENÚ (dinámico con QStackedWidget) =====
+        # Submenú
         self.submenu_stack = QStackedWidget()
         self.submenu_stack.setFixedWidth(190)
 
@@ -955,20 +955,20 @@ class App(QWidget):
         # Seleccionar nuevo botón principal
         if menu_type == "mapa":
             self.submenu_stack.setCurrentIndex(0)
-            self.central_stack.setCurrentIndex(0)   # panel central = MapPanel
+            self.central_stack.setCurrentIndex(0)
             self.selected_main_button = self.btn_map
             
-            # Forzar siempre selección del predeterminado "MAPA COMPLETO"
+            # Forzar siempre selección del predeterminado MAPA COMPLETO
             self.select_sub_button_mapa(
                 self.submenu_buttons["mapa"][0], "mapa", "MAPA COMPLETO",
                 individual=individual, force_select=True
             )
         elif menu_type == "combates":
             self.submenu_stack.setCurrentIndex(1)
-            self.central_stack.setCurrentIndex(1)   # panel central = CombatPanel
+            self.central_stack.setCurrentIndex(1)
             self.selected_main_button = self.btn_combat
             
-            # Forzar siempre selección del predeterminado "GYM PLATEADA"
+            # Forzar siempre selección del predeterminado GYM PLATEADA
             default_button = self.submenu_buttons["combates"][0]
             self.select_sub_button(
                 default_button, 

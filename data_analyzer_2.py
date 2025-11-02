@@ -7,9 +7,7 @@ def filtrar_f_local(nombre_archivo):
     with open(nombre_archivo, 'r', encoding="utf-16") as archivo:
         for linea in archivo:
             linea = linea.strip()
-            # Buscar líneas que contengan "f_local="
             if "f_global_best=" in linea:
-                # Extraer el valor después de "f_local="
                 match = re.search(r'f_global_best=([\d.]+)', linea)
                 if match:
                     fitness_values.append(float(match.group(1)))
@@ -42,7 +40,6 @@ for lst in listas:
         lst_rellena = lst
     listas_rellenadas.append(lst_rellena)
 
-# Asignar nombres más claros (según tu gráfico original)
 best1, best2, best3, start1, start2, half1 = listas_rellenadas
 
 plt.plot(range(50,max_len), best1[50:max_len], color='#2E86AB', linewidth=2, linestyle='-', marker='o', markersize=3, markevery=50, label="Temperatura 200, mejor individuo AG")

@@ -25,10 +25,10 @@ def simulated_annealing(
 
     # Parámetros de control
     iteration = 0
-    mode = "exploration"    # empieza explorando
-    no_improve_count = 0    # contador de iteraciones sin mejora
+    mode = "exploration"
+    no_improve_count = 0
 
-    print("=== INICIO ENFRIAMIENTO SIMULADO ===")
+    print("INICIO ENFRIAMIENTO SIMULADO")
 
     while iteration < max_iter:
         neighbors_yet_visited.append(current)
@@ -39,11 +39,11 @@ def simulated_annealing(
 
         # Ajuste dinámico según modo
         if mode == "exploration":
-            T = T_base * 2  # exploración -> temperatura más alta
+            T = T_base * 2  # exploración temperatura más alta
         else:
-            T = T_base * 0.9  # explotación -> temperatura más baja
+            T = T_base * 0.9  # explotación temperatura más baja
 
-        # --- Generación de vecinos (siempre las tres listas) ---
+        # Generación de vecinos
         neighbors = (
             generate_neighbors_team_entry_pkm(current, neighbors_yet_visited)
             + generate_neighbors_team_permutation(current, neighbors_yet_visited)
@@ -75,7 +75,7 @@ def simulated_annealing(
 
             no_improve_count = 0  # reiniciar contador
 
-            # si estamos explorando y mejora → pasa a explotación (baja T)
+            # si estamos explorando y mejora pasa a explotación
             if mode == "exploration":
                 mode = "exploitation"
                 print(f"[Iter {iteration}] Mejora detectada -> Cambio a EXPLOTACIÓN")
@@ -84,14 +84,12 @@ def simulated_annealing(
             for neighbor, neighbor_fit in zip(neighbors, neighbors_fitness):
                 print("NEIG FIT", neighbor_fit)
                 if neighbor_fit == current_fitness:
-                    # No hay mejora, hay movimiento lateral con 1 / len de probabilidad
-                    # Factor de temperatura (mayor T = más exploración)
                     temp_factor = T / T_init
 
                     # Factor de diversidad Normalizado 0-1
                     diversity_factor = math.log1p(len(neighbors)) / math.log1p(50)
 
-                    # Probabilidad lateral reducida ~60% menos
+                    # Probabilidad lateral reducida
                     lateral_prob = 0.05 + 0.08 * temp_factor + 0.04 * diversity_factor
                     print("LATERAL PROB", lateral_prob)
                     if random.random() < lateral_prob:
@@ -114,7 +112,7 @@ def simulated_annealing(
             # Si no hay mejora
             no_improve_count += 1
 
-            # Si llevamos 10 iteraciones sin mejora en explotación → pasar a exploración (subir T)
+            # Si llevamos 10 iteraciones sin mejora en explotación pasar a exploración
             if mode == "exploitation" and no_improve_count >= 10:
                 mode = "exploration"
                 no_improve_count = 0
@@ -157,7 +155,6 @@ def generate_neighbors_team_permutation(individual, neighbors_yet_visited):
         permutation_list = list(permutations(team))
         for permutation in permutation_list:
             list(permutation)
-            # New neighbor
             new_catches = copy.deepcopy(individual[0])
             new_teams = copy.deepcopy(individual[1])
             new_teams[teamPos] = list(permutation)

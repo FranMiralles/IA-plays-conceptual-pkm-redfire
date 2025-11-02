@@ -62,9 +62,9 @@ def eval_population_parallel(population, dataset, max_workers=None):
                 evaluated_individuals.append(result)
             except Exception as e:
                 print(f"Error evaluando individuo: {e}")
-                # En caso de error, asignar un fitness alto (malo)
+                # En caso de error, asignar un fitness alto
                 ind_copy = ind.copy()
-                ind_copy["fitness"] = 1000.0  # Fitness muy malo
+                ind_copy["fitness"] = 1000.0
                 evaluated_individuals.append(ind_copy)
     
     # Actualizar la población original
@@ -125,7 +125,7 @@ def prob_population(population):
     return population
 
 def select_from_population(population, percentage):
-    # Filtrar solo individuos con probabilidad > 0 (los evaluados)
+    # Filtrar solo individuos con probabilidad > 0
     eligible_population = [ind for ind in population if ind.get("prob", 0) > 0]
     
     if not eligible_population:
@@ -241,8 +241,6 @@ def select_mode(generation, best_fitness_history, mode_history, patience=20, lon
     else:
         mode = "exploitation"
 
-    # Si el modo no ha cambiado en `long_patience` generaciones
-    # y tampoco ha mejorado el fitness → forzar cambio de modo
     if len(best_fitness_history) >= long_patience:
         recent_modes = mode_history[-long_patience:]
         recent_fitness = best_fitness_history[-long_patience:]
@@ -288,11 +286,8 @@ if __name__ == "__main__":
             SELECTED_PERCENTAGE = SELECTED_PERCENTAGE_EXPLOITATION
             GENERATION_NUMBER = GENERATION_NUMBER_EXPLOITATION
         '''
-        # 1. EVALUAR POBLACIÓN ACTUAL (solo los que no tienen fitness)
-        # Usar versión secuencial para mayor estabilidad en Windows
+        # 1. EVALUAR POBLACIÓN ACTUAL
         population = eval_population_sequential(population, dataset)
-        # O comentar la línea anterior y descomentar esta para usar threads:
-        # population = eval_population_parallel(population, dataset)
         
         # 2. CALCULAR PROBABILIDADES
         population_with_prob = prob_population(population)
@@ -308,7 +303,7 @@ if __name__ == "__main__":
             
         selected_to_cross, selected_to_mute = select_from_population(selected_to_cross_mute, CROSS_PERCENTAGE)
         
-        # 4. OPERADORES GENÉTICOS (crean nuevos individuos sin fitness)
+        # 4. OPERADORES GENÉTICOS
         children = []
         if len(selected_to_cross) >= 2:
             pairs_to_cross = pair_individuals_for_crossover(selected_to_cross)
@@ -318,7 +313,7 @@ if __name__ == "__main__":
         if selected_to_mute:
             muted = mute_selected(selected_to_mute)
         
-        # 5. EVALUAR NUEVOS INDIVIDUOS (solo los nuevos)
+        # 5. EVALUAR NUEVOS INDIVIDUOS
         new_individuals = children + muted
         if new_individuals:
             new_individuals_evaluated = eval_population_sequential(new_individuals, dataset)
@@ -341,19 +336,18 @@ if __name__ == "__main__":
         # 7. COMPLETAR POBLACIÓN
         new_random = generate_population(POPULATION_NUMBER - GENERATION_NUMBER, inteligent_generation=True)
         
-        # 8. NUEVA POBLACIÓN (los mejores mantienen su fitness, los nuevos no)
+        # 8. NUEVA POBLACIÓN
         population = best_individuals + new_random
         
         #9 EVALUAR
         evaluated_population = [ind for ind in population if ind.get("fitness") is not None]
 
-        # 9. MOSTRAR PROGRESO
+        # MOSTRAR PROGRESO
         evaluated_population = [ind for ind in population if ind.get("fitness") is not None]
         if evaluated_population:
             current_fitness = [ind["fitness"] for ind in evaluated_population]
             current_best_fitness = min(current_fitness)
             
-            # Inicializar mode_history si está vacío
             if not hasattr(mode_history, '__len__'):
                 mode_history = []
             
@@ -368,7 +362,7 @@ if __name__ == "__main__":
                 GENERATION_NUMBER = GENERATION_NUMBER_EXPLORATION
             
             else:
-                # Extraer los MEJORES fitness de las últimas 5 generaciones
+                # Extraer los mejores fitness de las últimas 5 generaciones
                 last_five_best_fitness = [min(gen_fitness) for gen_fitness in generation_fitness_history[-5:]]
                 
                 # Verificar si estamos en periodo mínimo de explotación (últimas 5 generaciones)
@@ -397,7 +391,7 @@ if __name__ == "__main__":
                     mode = "explotacion"
                 
                 else:
-                    # No hay mejora o ya cumplimos periodo de explotación
+                    # No hay mejora
                     print("MODO EXPLORACIÓN")
                     print(f"Current best: {current_best_fitness}")
                     print(f"Last five bests: {last_five_best_fitness}")
